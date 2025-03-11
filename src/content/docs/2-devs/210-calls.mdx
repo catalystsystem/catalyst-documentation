@@ -41,7 +41,7 @@ interface ICrossCatsCallback {
 }
 ```
 
-Additionally, Catalyst provides a basic multicall handler with the following defined structs:
+Additionally, Catalyst provides a [multicall](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) handler with the following defined structs:
 
 ```solidity
 struct Call {
@@ -62,7 +62,7 @@ struct Instructions {
 }
 ```
 
-When used: `executionData = abi.encode(Instructions)`.
+When used: set `remoteCall = abi.encode(Instructions)`.
 
 For the default Catalyst `OutputDescription`:
 

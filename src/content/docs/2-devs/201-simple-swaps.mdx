@@ -6,9 +6,9 @@ sidebar:
   order: 1
 ---
 
-Catalyst is an entirely componentized, permissionless system with no inherent trust elements. It is up to integrators to mix and match components as needed. We will provide baselines for generally available components.
+Catalyst is an entirely componentized and permissionless system with no inherent trust elements. It is up to integrators to mix and match components as needed. We will provide baselines for generally available components.
 
-A Catalyst order generally follows this structure:
+A Catalyst order generally follows the structure of the `CatalystCompactOrder`:
 
 ```solidity
 struct CatalystCompactOrder {
@@ -56,15 +56,15 @@ struct CatalystWitness {
 }
 ```
 
-The user (sponsor) shall then sign it as an EIP-712 signed structure.
+The [sponsor](/glossary#sponsor) (user) shall then sign it as an EIP-712 signed structure.
 
-### Order Parameters
+## Order Parameters
 
-#### Inputs
+### Inputs
 
-For `TheCompact`, the inputs need to be provided as an array of `[uint256 tokenId, uint256 amount]`. The `tokenId` refers to the `TheCompact` encoded tokenId, which contains relevant lock details. See [TheCompact](https://github.com/Uniswap/the-compact/blob/c4776fa3264f7c64b26b5800b5f8d8e651089b0a/src/lib/IdLib.sol#L87-L104).
+For `TheCompact`, the inputs need to be provided as an array of `[uint256 tokenId, uint256 amount]`. The `tokenId` refers to the `TheCompact` encoded tokenId, which contains relevant lock details. See [IdLib.sol::toIdIfRegistered](https://github.com/Uniswap/the-compact/blob/c4776fa3264f7c64b26b5800b5f8d8e651089b0a/src/lib/IdLib.sol#L87-L104).
 
-#### Output
+### Output
 
 ```solidity
 struct OutputDescription {
@@ -81,31 +81,37 @@ struct OutputDescription {
 
 Note that `OutputDescription.remoteOracle` and `CatalystCompactOrder.localOracle` need to match. Together, they define the validation layer used. Each order should only use one validation layer, which can be an aggregation of AMBs.
 
-`remoteFiller` specifies the output type. For limit orders, use the `CoinFiller` and set `fulfillmentContext` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `fulfillmentContext` appropriately.
+`remoteFiller` specifies the output type. For limit orders, use the `CoinFiller` and set `fulfillmentContext` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `fulfillmentContext` [appropriately](/solver/auctions#dutch-auction).
 
 Specify the token as the `bytes32` identifier. For EVM, the address is left-padded, e.g., `0x000...00abcdef`.
 
-##### RemoteCall
+#### RemoteCall
 
-You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `remoteCall` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the Catalyst Multicaller can be used.
+You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `remoteCall` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the [Catalyst Multicaller](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) can be used.
 
-#### Structure
+[Learn more about Sub-Calls →](/devs/calls)
+
+### Structure
 
 Then configure the relevant order structure:
 
-- `address user`: Pays for the inputs of the order.
+- `address user`: Pays for the inputs of the order. If the order fails, will be recipient of the refund.
 - `uint256 nonce`: Unique order identifier to redeem locks with. If two orders share the same nonce and user, only one can be redeemed.
 - `uint256 originChainId`: The chainId (canonical) of the input chain.
 - `uint32 fillDeadline`: The expiry of the lock. Enough time for the fill and validation needs to be provided.
 - `address localOracle`: Address of the validation layer on the origin chain.
 
-### Broadcasting Order
+## Broadcasting Order
 
-There are two ways to manage orders: 1. On-chain deposits and 2. Off-chain relay.
+There are two ways to manage orders:
+1. On-chain deposits.
+2. Off-chain relay.
 
-#### On-chain deposits
+Catalyst recommends that you use off-chain relay for a cheaper and more seamless experience. Though, for a fully decentralised system the on-chain deposit may provide advantages for you.
 
-For non-wallet integrators, **on-chain deposits** are the easiest integration. It uses more gas but abstracts all resource lock complexity away:
+### On-chain deposits
+
+For non-wallet integrators, **on-chain deposits** is the easiest integration. It uses more gas but abstracts the resource lock complexity away:
 
 ```solidity
 function depositFor(CatalystCompactOrder calldata order, ResetPeriod resetPeriod) external;
@@ -113,7 +119,7 @@ function depositFor(CatalystCompactOrder calldata order, ResetPeriod resetPeriod
 
 `resetPeriod` should exceed the expiry window.
 
-#### Off-chain relaying
+### Off-chain relaying
 
 For other integrators, **off-chain relaying** is both the easiest and cheapest integration. Simply use the associated integration endpoint of your wallet of choice and then broadcast the order through the order-server.
 
