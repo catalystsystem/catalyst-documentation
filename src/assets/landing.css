@@ -14,6 +14,7 @@
       105vw 200vh,
     radial-gradient(var(--overlay-blurple), transparent 65%) no-repeat 50%
       calc(100% + 20rem) / 60rem 30rem;
+  background-attachment: fixed;
 }
 
 header.header {
