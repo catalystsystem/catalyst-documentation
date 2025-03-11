@@ -70,7 +70,7 @@ export default defineConfig({
         {
           label: "CatalystAMM",
           collapsed: true,
-          badge: "Deprecated",
+          badge: { text: "Deprecated", variant: "caution"},
           autogenerate: {
             directory: "9-amm",
           },
