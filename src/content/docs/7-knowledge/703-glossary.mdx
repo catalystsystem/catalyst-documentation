@@ -1,6 +1,6 @@
 ---
 title: "Glossary"
-slug: "knowledge/glossary"
+slug: "glossary"
 description: "Intent systems and cross-chain bridges use many specialized terms. This page explains arbiters, allocators, sponsors, locks, GMPs, settlers, and more."
 sidebar:
   order: 3
@@ -12,6 +12,9 @@ An entity, contract, or mechanism capable of determining when the desired action
 
 ## Allocator
 An entity that validates that a lock does not exceed a user’s current balance. It may also act as an arbiter. When depositing into a lock, an allocator is chosen.
+
+## Fill First
+A swap flow where the tokens are delivered to the user _before_ the input tokens are collected by a protocol. These flows use specialised wallet techniques like [resource locks](/glossary#resource-lock) to remain safe.
 
 ## GMP
 Generalized Message Passing. Describes a method to send messages between two chains. Examples include Wormhole, LayerZero, Hyperlane, and more.

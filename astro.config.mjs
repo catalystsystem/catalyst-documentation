@@ -10,8 +10,10 @@ import svelte from "@astrojs/svelte";
 // https://astro.build/config
 export default defineConfig({
   redirects: {
-    "/cross-cats/": "/intent/intent/",
-    "/cross-cats/solver/": "/intent/becoming-a-solver/introduction/"
+    "/cross-cats/": "/",
+    "/cross-cats/solver/": "/solver/intro",
+    "/solver/auction/": "/solver/auctions/",
+    "/knowledge/glossary/": "/glossary/"
   },
   site: `${process.env["CF_PAGES_URL"] ?? "https://docs.catalyst.exchange"}`,
   markdown: {

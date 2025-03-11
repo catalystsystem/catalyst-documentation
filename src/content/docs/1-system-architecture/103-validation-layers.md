@@ -55,11 +55,11 @@ There are two types of validation interfaces:
 
 Currently, two self-serve validation interfaces are implemented, while no automatic interfaces are supported.
 
-### Wormhole (self-serve)
+### [Wormhole](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (self-serve)
 
-The Wormhole implementation is based on the broadcast functionality of Wormhole. A group of payloads can be collected and packed into a larger message:
+The Wormhole implementation is based on the broadcast functionality of Wormhole. A group of payloads can be collected and [packed into a larger message](https://github.com/catalystsystem/catalyst-intent/blob/fcdbdc6a77734ddc56be0e5de737f324cbba670d/src/libs/MessageEncodingLib.sol#L30-L44):
 
-```
+```solidity
 Common Structure (Repeated 0 times)
     SENDER_IDENTIFIER       0       (32 bytes)
     + NUM_PAYLOADS          32      (2 bytes)
@@ -72,11 +72,11 @@ where M_i = sum_0^(i-1) M_i and M_0 = 32
 
 This message is then emitted to the Wormhole guardian set. Once the associated proof becomes available, the solver can submit the associated proof on the input chain and validate their intents.
 
-Notice that the Wormhole implementation uses a more efficient validation algorithm than `Implementation.sol`.
+Notice that the Wormhole implementation uses a more efficient validation algorithm than Wormhole's `Implementation.sol`.
 
 Solvers wanting to support orders using the Wormhole validation layer need to listen to the Guardian gossip network to collect proofs.
 
-### Polymer (self-serve)
+### [Polymer](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (self-serve)
 
 Polymer allows validating specific events. As a result, the fill event is parsed:
 ```solidity
@@ -91,7 +91,7 @@ bytes32 payloadHash = _proofPayloadHash(orderId, solver, timestamp, output);
 
 Solvers wanting to support orders using the Polymer validation layer need to implement the Polymer API to collect relevant event proofs.
 
-### Bitcoin (self-serve)
+### [Bitcoin](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/bitcoin/BitcoinOracle.sol) (self-serve)
 
 Catalyst has a Bitcoin Simplified Payment Validation (SPV) client implementation. The implementation works both as an Output Settlement implementation and as a validation layer.
 

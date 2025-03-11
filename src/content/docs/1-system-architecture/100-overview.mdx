@@ -8,30 +8,28 @@ sidebar:
 
 Catalyst modularizes three components of the cross-chain intent flow:
 
-1. **Input settlement scheme** - Handles the source chain funds
-2. **Output settlement scheme** - Handles the destination chain funds
-3. **Validation layer** - Connects the input and output settlement
+1. **Input settlement scheme** – Handles the source chain funds
+2. **Output settlement scheme** – Handles the destination chain funds
+3. **Validation layer** – Connects the input and output settlement
 
-Historically, these components have been intertwined, presenting issues with scaling. Catalyst's componentized approach allows for greater flexibility and extensibility, allowing for different input and output settlement schemes and validation layers. This allows Catalyst to support varying degrees of asset technologies: fill first, user as solver, and ordinary swaps.
-
-## Core Components
+Historically, these components have been intertwined, presenting issues with scaling. Catalyst's componentized approach allows for greater flexibility and extensibility, allowing for different input and output settlement schemes and validation layers to be matched. This allows Catalyst to support varying degrees of asset technologies: fill first, user as solver, and ordinary swaps.
 
 ### Input Settlement
 
 The input settlement scheme is responsible for managing user deposits and releasing funds to solvers once intents are fulfilled. Catalyst currently implements two input settlement schemes:
 
-- [**TheCompact**](https://github.com/Uniswap/the-compact) through `CompactSettlerWithDeposit.sol`
-- [**Rhinestone**](https://www.rhinestone.wtf) through `CompactSettler.sol`
+- [**TheCompact**](https://github.com/Uniswap/the-compact) through [`CompactSettlerWithDeposit.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/settlers/compact/CompactSettlerWithDeposit.sol)
+- [**Rhinestone**](https://www.rhinestone.wtf) through [`CompactSettler.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/settlers/compact/CompactSettler.sol)
 
 Both are resource locks supporting fill-first flows, though Catalyst also supports ordinary flows.
 
-Catalyst imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through the validation layer by either `isProven` or `efficientRequireProven`. If an order contains multiple outputs and the outputs are filled by different solvers, the filler of the first output in the order specification shall be the canonical solver.
+Catalyst imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through the validation layer by either [`isProven` or `efficientRequireProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol). If an order contains multiple outputs and the outputs are filled by different solvers, the filler of the first output in the order specification shall be the canonical solver.
 
 [Learn more about Input Settlement →](/architecture/input)
 
 ### Output Settlement
 
-The output settlement scheme handles the delivery of assets on destination chains. The output settlement scheme imposes no interface requirements, order structure, or order type except that an interface to validate payloads is provided:
+The output settlement scheme handles the delivery of assets on destination chains. The output settlement scheme imposes no interface requirements, order structure, or order type except that an [interface to validate payloads](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IPayloadCreator.sol) is provided:
 ```solidity
 interface IPayloadCreator {
     function arePayloadsValid(
@@ -53,9 +51,9 @@ The validation layer ferries valid payloads from the output chain to the input c
 
 Any validation layer can be added to Catalyst as long as it supports validating a payload from a remote chain. Currently implemented validation layers include:
 
-- **Wormhole** (self-serve)
-- **Polymer** (self-serve)
-- **Bitcoin** (self-serve)
+- [**Wormhole**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (self-serve)
+- [**Polymer**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (self-serve)
+- [**Bitcoin**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/bitcoin/BitcoinOracle.sol) (self-serve)
 
 It's expected that before making messages, the validation layer checks if one or more payloads are valid and then ships them to the input chain:
 ```solidity
@@ -95,7 +93,7 @@ interface IValidationLayer {
 
 Using only the payload hash makes the system more efficient as less data is passed around.
 
-No attempt is made at standardizing the payload. As a result, there may be incompatibilities between the input and output settlement layers.
+No attempt is made at standardizing the payload. As a result, there may be [incompatibilities](/architecture/overview#standardized-message-format) between the input and output settlement layers.
 
 [Learn more about Validation Layers →](/architecture/validation)
 
@@ -104,8 +102,8 @@ No attempt is made at standardizing the payload. As a result, there may be incom
 
 The Catalyst system includes resource locks which create trust boundaries between key actors:
 
-- **Sponsors** (users) trust that arbiters won't fraudulently finalize issued locks.
-- **Arbiters/solvers** trust allocators not to co-sign overlapping locks exceeding user deposits.
+- **[Sponsors](/glossary#sponsor)** (users) trust that arbiters won't fraudulently finalize issued locks.
+- **[Arbiters](/glossary#arbiter)** and **[solvers](/glossary#solver)** trust allocators not to co-sign overlapping locks exceeding user deposits.
 
 No single actor can independently access funds, creating a secure environment for cross-chain transactions.
 
@@ -117,12 +115,14 @@ Catalyst is designed to be highly composable with different components capable o
 - **Output Settlement**: New order types and fulfillment mechanisms can be added.
 - **Validation Layer**: Different cross-chain messaging protocols and proof layers can be supported.
 
+[Integrators](/glossary#integrator) can freely pick and choose which components to use for which swaps. This gives intent issuers maximum flexibility to describe their desired endstate.
+
 ## Unsolved Issues
 
-The following issues are unsolved.
+While the initial version of the Catalyst System is a step function improvement over competing solution at standardizing the intent stack, there are still interopability issues within the standard. For transparency, known specification issues have been listed below.
 
 ### Standardized Message Format
-Currently, the input settlement scheme and the output settlement scheme has to agree on an order-type specific payload. If a new order type or settlement system requires more functionality beyond the implemented message payload, it requires deploying these components over. This also break composability between these layers.
+Currently, the input settlement scheme and the output settlement scheme has to agree on an order-type specific payload. If a new order type or settlement system requires more functionality beyond the implemented message payload, it requires deploying these components over. This break composability between these layers.
 
 Assuming the output description can be represented as:
 ```solidity
@@ -151,9 +151,9 @@ Encoded FillDescription
      + FULFILLMENT_CONTEXT_LENGTH    166+RC_LENGTH   (2 bytes)
      + FULFILLMENT_CONTEXT           168+RC_LENGTH   (LENGTH bytes)
 ```
-
-NOTE! No assumptions are ever made on how validation layers pass messages between each other. They can pack fill descriptions however they like.
-
+:::note
+No assumptions are ever made on how validation layers pass messages between each other. They can pack fill descriptions however they like.
+:::
 ### Atomic Swaps and HTLCs as validation layers.
 
 HTCLs works very differently from ordinary intent schemes as they require a round of strong commitments. This pre-bakes certain system assumptions which cannot be abstracted away through the Catalyst Intent System. As a result, these are not considered.
@@ -164,4 +164,4 @@ As interfaces and validation layers are not standardized, each new order type, v
 
 ### Optimistic Validation layers
 
-The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have an on-chain storage. This increases the gas cost.
+The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have an on-chain storage. This increases the gas cost. Ideally the specification should define a way for 1 proof to validate multiple _orders_, not just outputs.
