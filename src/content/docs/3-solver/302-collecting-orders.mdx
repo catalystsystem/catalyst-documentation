@@ -169,21 +169,15 @@ class WebSocketClient {
   private ws: WebSocket;
   private reconnectInterval = 5000; // Reconnect interval in milliseconds
   private wsUri: string;
-  private apiKey: string;
 
-  constructor(wsUri: string, apiKey: string) {
+  constructor(wsUri: string) {
     this.wsUri = wsUri;
-    this.apiKey = apiKey;
     this.connect();
   }
 
   private connect(): void {
     // Initialize WebSocket connection
-    this.ws = new WebSocket(this.wsUri, {
-      headers: {
-        "x-api-key": this.apiKey,
-      },
-    });
+    this.ws = new WebSocket(this.wsUri);
 
     // Connection opened
     this.ws.on("open", () => {
@@ -258,10 +252,9 @@ class WebSocketClient {
 
 // Usage example
 const wsUri = "order-server-uri";
-const apiKey = "your-api-key";
 
 // Create WebSocket client
-const client = new WebSocketClient(wsUri, apiKey);
+const client = new WebSocketClient(wsUri);
 
 // Keep the process running
 process.on("SIGINT", () => {
