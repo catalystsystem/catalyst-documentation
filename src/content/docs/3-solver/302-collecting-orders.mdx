@@ -11,127 +11,269 @@ sidebar:
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-The Catalyst order server is the recommended integration surface. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain.
+The Catalyst order server is a helpful intermediary that allows users to submit intents (orders) and broadcasts those intents to solvers. It serves as a central hub that:
 
-### Types
+1. Collects user intents from various sources
+2. Broadcasts these intents to connected solvers in real-time
+3. Tracks the on-chain status of all transactions necessary for the intent to work end-to-end
+
+While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
+
+## 1. Authentication
+
+All solvers need to be authenticated with the Catalyst order server to be able to subscribe to orders and push their inventory. Authentication is handled via API tokens that provide secure access to the order server's WebSocket endpoints and API services.
+
+##### Obtaining API Access
+
+To get your API token:
+
+1. Please reach out to our team at [email](mailto:x@x) with the subject "Solver API Access Request"
+2. Include your organization name and a brief description of your solver implementation
+3. Our team will review your request and provide you with a unique API token
+
+##### Using Your API Token
+
+The API token must be included in all requests to the order server:
+
+- For HTTP requests: Include the token in the request headers as `x-api-key: YOUR_API_TOKEN`
+- For WebSocket connections: Pass the token in the connection headers as shown in the WebSocket example below
 
 ```typescript
-type OutputDescription = {
-  bytes32 remoteOracle: string;
-  bytes32 remoteFiller: string;
-  uint256 chainId: number;
-  bytes32 token: string;
-  uint256 amount: string;
-  bytes32 recipient: string;
-  bytes remoteCall: string;
-  bytes fulfillmentContext: string;
-};
+const ws = new WebSocket(wsUri, {
+  headers: {
+    "x-api-key": apiKey,
+  },
+});
+```
 
-type CatalystCompactOrder = {
+## 2. Quotes broadcasting
+
+To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of swap-timed chunks. This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
+
+Solvers can broadcast their available liquidity and pricing information in the following format:
+
+```json
+{
+  "fromChain": 1, // Ethereum
+  "toChain": 8453, // Base
+  "fromToken": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
+  "toToken": "0x123...", // USDC on Base, address(0) for native tokens
+  "price": 0.999, // how much toToken per fromToken
+  "fixedFee": 0.5, // e.g., 0.5 USDC flat fee
+  "maxAmount": 1000000000, // max the solver will handle
+  "minAmount": 10000000, // optional minimum amount
+  "expiry": 1713296400 // quote expires at this timestamp
+}
+```
+
+By broadcasting quotes in this manner, solvers can:
+
+- Efficiently communicate their available liquidity across multiple chain and token pairs
+- Set their own pricing and fee structure
+- Define limits on transaction sizes they're willing to process
+- Update their quotes periodically as market conditions change
+- The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
+
+## 3. Order subscription
+
+The order subscription system allows solvers to receive real-time order notifications through a WebSocket connection. This subscription-based approach ensures that solvers can immediately process new orders as they enter the system, without needing to continuously poll for updates.
+
+When subscribing to orders, solvers receive structured data containing all necessary information to evaluate and potentially fulfill each order. The subscription system handles automatic reconnection in case of connection issues and provides a robust way to maintain a persistent connection to the order server.
+
+Below are the key types and implementation details for setting up an order subscription:
+
+```typescript
+// types
+
+interface CatalystEvent<T> {
+  event: CatalystWsEventType;
+  data: T;
+}
+
+export enum CommonWsEvent {
+  // Common hearbeat events
+  PING = "ping",
+  PONG = "pong",
+  TCP_PONG = "tcp-pong",
+}
+
+export enum CatalystWsEvent {
+  APP_ORDER_STATUS_CHANGED = "app:order-status-change",
+
+  SOLVER_QUOTE_PUSH = "solver:quote-push",
+  USER_ORDER_VM = "user:vm-order-submit",
+  USER_ORDER_NON_VM = "user:non-vm-order-submit",
+}
+
+/**
+ * CATALYST V3
+ */
+
+// TODO: update this meta, some values are outdated
+export interface CatalystOrderMeta {
+  submitTime: number;
+  orderIdentifier?: string;
+  orderStatus?: string;
+  connectedWalletId?: string;
+  destinationAddress?: string;
+  originId?: string;
+  confirmationsCount?: number;
+  requiredConfirmationsCount?: number;
+  orderInitiatedTxHash?: string;
+  orderPurchasedTxHash?: string;
+  orderProvenTxHash?: string;
+  nonVmTxHash?: string;
+
+  signedAt?: Date;
+  initiatedAt?: Date;
+  pendingTransferAt?: Date;
+  settledTransferAt?: Date;
+  purchasedAt?: Date;
+  provenAt?: Date;
+  failedAt?: Date;
+  expiredAt?: Date;
+}
+
+export interface OutputDescriptionV3 {
+  remoteOracle: string;
+  remoteFiller: string;
+  token: string;
+  amount: number;
+  recipient: string;
+  chainId: number;
+  remoteCall: string;
+  fulfillmentContext: string;
+}
+
+export interface CompactOrder {
   user: string;
   nonce: number;
   originChainId: number;
   fillDeadline: number;
   localOracle: string;
-  inputs: [string, string][];
-  outputs: OutputDescription[];
-};
+  inputs: [number, number][];
+  outputs: OutputDescriptionV3[];
+}
 
-type OrderDto = {
-  order_type: "CatalystCompactOrder" | ...;
-  order: CatalystCompactOrder | ...;
-  quote: {
-    fromAsset: string;
-    toAsset: string;
-    toPrice: string;
-    fromPrice: string;
-    intermediary: "USD" | "EUR" | "BTC" | string; // explicit types as example
-    discount: string;
-  }[];
-  sponsorSignature: string | "";
-  allocatorSignature: string | "";
-  submitTime: number;
-};
-```
+export interface CatalystOrderV3 {
+  order: CompactOrder;
+  quotes: QuoteContext;
+  meta: CatalystOrderMeta;
+  sponsorSignature: string;
+  allocatorSignature: string;
+}
 
-## WebSocket Subscription
+import { WebSocket } from "ws";
 
-The Catalyst order server delivers orders through a WebSocket subscription, allowing for real-time updates without the need to continuously poll the order server. By leveraging WebSocket, the Catalyst order server broadcasts new orders as they arrive, offering a significant reduction in latency but at the cost of solvers having to locally filter incoming data.
+class WebSocketClient {
+  private ws: WebSocket;
+  private reconnectInterval = 5000; // Reconnect interval in milliseconds
+  private wsUri: string;
+  private apiKey: string;
 
-:::note
-The data received through WebSocket is not pre-filtered. This means every order event will be pushed to your application, and it is up to your implementation to manage and filter these events locally.
-:::
+  constructor(wsUri: string, apiKey: string) {
+    this.wsUri = wsUri;
+    this.apiKey = apiKey;
+    this.connect();
+  }
 
-Below is a simplified implementation in pure JavaScript that demonstrates how to connect to the WebSocket server, handle incoming messages, respond to ping events, and automatically attempt to reconnect if the connection is lost.
+  private connect(): void {
+    // Initialize WebSocket connection
+    this.ws = new WebSocket(this.wsUri, {
+      headers: {
+        "x-api-key": this.apiKey,
+      },
+    });
 
-(TODO: update TypeScript block)
-```typescript
-const WebSocket = require("ws");
+    // Connection opened
+    this.ws.on("open", () => {
+      console.log("Connected to WebSocket server");
+      // You can send an initial message here if needed
+      this.ws.send(
+        JSON.stringify({ type: "hello", message: "Connected to server" })
+      );
+    });
 
-// Configuration variables
-const wsUri = process.env.ORDER_SERVER_WS_URI; // Set your WebSocket server URI
-const apiKey = process.env.ORDER_SERVER_API_KEY; // Set your API key
-const reconnectInterval = 5000; // Reconnect interval in milliseconds
+    // Listen for messages
+    this.ws.on("message", (data: RawData) => {
+      try {
+        const parsedData: CatalystEvent<unknown> = JSON.parse(data.toString());
 
-// Function to connect to the WebSocket server
-function connectToOrderServer() {
-  const ws = new WebSocket(wsUri, {
-    headers: {
-      "x-api-key": apiKey,
-    },
-  });
+        switch (parsedData.event) {
+          case CatalystWsEventType.PING:
+            this.handleReceivePing();
+            break;
 
-  ws.on("open", () => {
-    console.log("Connected to WebSocket server");
-  });
+          case CatalystWsEventType.VM_ORDER:
+            console.log(`[${CatalystWsEventType.VM_ORDER}]`, parsedData);
+            // add your custom filling logic in this function
+            this.handleVmOrder(parsedData as CatalystEvent<CatalystOrderV3>);
+            break;
 
-  ws.on("message", (data) => {
-    try {
-      const parsedData = JSON.parse(data.toString());
-      console.log("Received message:", parsedData);
-
-      switch (parsedData.event) {
-        case "ping":
-          // You will be automatically disconnected if you don't respond to ping messages
-          ws.send(JSON.stringify({ event: "pong" }));
-          break;
-        case "order":
-          handleReceiveOrder(parsedData, ws);
-          break;
-        default:
-          console.log("Unknown message type:", parsedData);
+          default:
+            console.log("Unknown message type:", parsedData);
+        }
+      } catch (error) {
+        console.error("Error parsing JSON:", error);
       }
-    } catch (error) {
-      console.error("Error parsing JSON:", error);
-    }
-  });
+    });
 
-  ws.on("error", (error) => {
-    console.error("WebSocket error:", error);
-  });
+    // Handle errors
+    this.ws.on("error", (error) => {
+      console.error("WebSocket error:", error);
+    });
 
-  ws.on("close", () => {
-    console.log("Disconnected from WebSocket");
+    // Handle disconnection
+    this.ws.on("close", () => {
+      console.log("Disconnected from WebSocket server");
+      this.reconnect();
+    });
+  }
 
-    console.log("Attempting to reconnect...");
+  private reconnect(): void {
+    console.log(
+      `Attempting to reconnect in ${this.reconnectInterval / 1000} seconds...`
+    );
     setTimeout(() => {
-      ws.close(); // Close any existing connection
-      connectToOrderServer(); // Attempt to reconnect
-    }, reconnectInterval);
-  });
+      this.connect();
+    }, this.reconnectInterval);
+  }
+
+  public sendMessage(message: any): void {
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.warn("WebSocket is not open. Cannot send message.");
+    }
+  }
+
+  private sendPong(): void {
+    this.sendMessage({ type: "pong" });
+  }
+
+  public close(): void {
+    this.ws.close();
+  }
 }
 
-// Function to handle orders
-function handleReceiveOrder(data, ws) {
-  console.log("Handling order:", data);
-  // Add your custom handling logic here
-}
+// Usage example
+const wsUri = "order-server-uri";
+const apiKey = "your-api-key";
 
-// Start listening to the order server
-connectToOrderServer();
+// Create WebSocket client
+const client = new WebSocketClient(wsUri, apiKey);
+
+// Keep the process running
+process.on("SIGINT", () => {
+  console.log("Closing WebSocket connection...");
+  client.close();
+  process.exit(0);
+});
 ```
 
-## Evaluating Orders
+## 4. Order filling
+
+#### Evaluating Orders
 
 After fetching an order, the solver must thoroughly evaluate it to determine its viability and potential execution. To facilitate this evaluation, several contextual pointers are available within the returned order data. Key aspects to consider include:
 
@@ -139,7 +281,7 @@ After fetching an order, the solver must thoroughly evaluate it to determine its
 
 Evaluating orders carefully ensures that solvers can accurately determine the feasibility of executing an order, adhere to exclusivity rules, and avoid conflicts, thereby maintaining the integrity and efficiency of the order fulfillment process.
 
-## On-chain Order Broadcast
+#### On-chain Order Broadcast
 
 Output settlement schemes supporting on-chain orders like [`CompactSettlerWithDeposit.sol`](/architecture/input/#with-deposit) allow anyone to broadcast and collect orders on-chain through the `Deposit` event:
 
