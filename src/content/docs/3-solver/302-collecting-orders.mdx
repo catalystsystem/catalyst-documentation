@@ -23,7 +23,6 @@ The Catalyst order server is a helpful intermediary that allows users to submit 
 
 While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that – _for on-chain orders_ – **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
 
-
 ## Order subscription
 
 Below we will go over how to collect Catalyst orders. Alternatively see the example solver here: https://github.com/catalystsystem/catalyst-example-solver/blob/main/src/handlers/vm-order.handler.ts
@@ -32,40 +31,32 @@ The order subscription system allows solvers to receive real-time order notifica
 
 When subscribing to orders, solvers receive structured data containing all necessary information to evaluate and potentially fulfill each order. The subscription system handles automatic reconnection in case of connection issues and provides a robust way to maintain a persistent connection to the order server.
 
-Below are the key types and implementation details for setting up an order subscription:
+### Order Server events
 
+Catalyst webscoket message are formatted with a event and a data field:
 ```typescript
-// misc types
 interface CatalystEvent<T> {
   event: CatalystWsEventType;
   data: T;
 }
-
-export enum CommonWsEvent {
-  // Common heartbeat events
+```
+The Datafield depends on the event type::
+```typecript
+export enum WebSocketEvents {
+  /// @dev Heartbeat event.
   PING = "ping",
-  PONG = "pong",
-  TCP_PONG = "tcp-pong",
-}
-
-export enum CatalystWsEvent {
-  APP_ORDER_STATUS_CHANGED = "app:order-status-change",
-
+  /// @dev Intent has been submitted and is being broadcast
   USER_ORDER_VM = "user:vm-order-submit",
-  USER_ORDER_NON_VM = "user:non-vm-order-submit",
+  /// @dev Intent status has been changed. This may indicate that an intent has been filled.
+  APP_ORDER_STATUS_CHANGED = "app:order-status-change",
 }
+```
 
-export interface CatalystQuoteRequestData {
-  quoteRequestId: string;
-  fromChain: string;
-  toChain: string;
-  fromAsset: string;
-  toAsset: string;
-  expirationTime: string;
-  amount: string;
-}
+When connected to the order server, the order server will continuously send a ping messages to which the client is expected to respond with a `pongs`. This is used to disconnect misbehaving clients and for debugging purposes.
 
-// TODO: this should contain the orderId so solver's don't have to derive it.
+For order collection, the important event is `USER_ORDER_VM`. The Data will be formatted as a `CatalystOrder`:
+
+```typescript
 export interface CatalystOrder {
   order: CompactOrder;
   quotes: QuoteContext;
@@ -128,7 +119,11 @@ export interface CatalystOrderMeta {
   failedAt?: Date;
   expiredAt?: Date;
 }
+```
 
+Below you can find an example script to connect to the websocket server.
+
+```typescript
 import { WebSocket } from "ws";
 
 class WebSocketClient {
