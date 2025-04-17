@@ -59,6 +59,8 @@ Think of Catalyst like Uber for cross-chain transfers: Users request a service (
 
 Resource locks are smart contracts that securely hold user funds until specific conditions are met. They act as escrow accounts, ensuring that users' assets remain safe until their cross-chain transaction is properly executed.
 
+You can find more information on resource locks in the [knowledge database](/knowledge/resource-locks).
+
 ## How It Works
 
 1. **User expresses an intent**: A user deposits their tokens using a resource lock standard (like The Compact)
@@ -69,12 +71,12 @@ Resource locks are smart contracts that securely hold user funds until specific 
 
 ## Concepts & Actors in the Catalyst System
 
-- **Intents:** User requests that express what they want to accomplish without specifying exactly how it should happen.
-- **Solvers**: Entities who compete to fill orders
-- **Resource Locks**: Smart contracts that securely escrow and unlock user funds
-- **Order Server**: Marketplace where intents are matched with solvers
-- **Filler**: Records asset delivery on destination chain
-- **Oracle**: Transmits proof of delivery back to source chain
-- **Settler**: Verifies proofs and releases locked funds to solvers
+- [**Intents**](/glossary#intent)**:** User requests that express what they want to accomplish without specifying exactly how it should happen.
+- [**Solvers**](/glossary#solver)**:** Entities who compete to fill orders
+- [**Resource Locks**](/glossary#resource-lock)**:** Smart contracts that securely escrow and unlock user funds
+- [**Order Server**](/glossary#order-server)**:** Marketplace where intents are matched with solvers
+- [**Filler**](/glossary#filler)**:** Records asset delivery on destination chain
+- [**Oracle**](/glossary#oracle)**:** Transmits proof of delivery back to source chain
+- [**Settler**](/glossary#settler)**:** Verifies proofs and releases locked funds to solvers
 
 You can find more definitions in the [glossary](/glossary).

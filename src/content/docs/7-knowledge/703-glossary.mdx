@@ -16,6 +16,9 @@ An entity that validates that a lock does not exceed a user’s current balance.
 ## Fill First
 A swap flow where the tokens are delivered to the user _before_ the input tokens are collected by a protocol. These flows use specialised wallet techniques like [resource locks](/glossary#resource-lock) to remain safe.
 
+## Filler
+A contract that records fill statements allowing oracles to get original proof that outputs have been sent to users.
+
 ## GMP
 Generalized Message Passing. Describes a method to send messages between two chains. Examples include Wormhole, LayerZero, Hyperlane, and more.
 
@@ -26,10 +29,22 @@ An allowance issued by a user to an arbiter. Before locks are valid, they must b
 The starting point. Input assets refer to the assets paid into the intent system. The input chain refers to the chain(s) of the input assets.
 
 ## Integrator
-Someone who issues intents for a cross-chain intent system.
+See [Intent Issuer](#intent-issuer)
 
 ## Intent
 An issuance of a desired action. Intents are often used to describe swaps but can also describe desired cross-chain interactions. Unlike swaps, intents should generally be composable. Intents are usually self-contained, meaning they describe both the desired end state and the payment to achieve that state; the output and input, respectively.
+
+## Intent Issuer
+Someone who issues intents for a cross-chain intent system. The intent issuers specifies how the intent is configured. It is then up to [solvers](#solver) to determine whether or not they will fill the intent.
+
+## Optimistic
+A validation method that assumes statements are true unless disputed. This 
+
+## Oracle
+A contract that can attest to the trueness of a statement. In an intent system, oracles act as validation layers attesting to whether or not the user's desires assets have been delivered. Oracles may use a variety of different mechanisms to attest: Optimistic, messaging bridge, light clients, etc. 
+
+## Order Server
+A server that sits between intent issuers and solvers aiding with broadcasting and distribution of intents.
 
 ## Output
 The endpoint. Output assets refer to the desired tokens to be paid to the user (or used within a larger action). The output chain refers to the chain(s) of the output assets.
@@ -41,7 +56,7 @@ A clever 3/3 (or 2/2) multisignature scheme that provides unique balance abstrac
 A contract in a cross-chain intent system that delivers assets. In a resource lock supporting cross-chain intent system, the input/origin settler is often an arbiter.
 
 ## Solver
-An actor that solves intents for users. They participate in the intent system with the goal of earning margins from the difference between the cost of achieving the end state and the inputs.
+A specialised third party who fulfills cross-chain intents using a variety of liquidity sources. They participate in the intent system with the goal of earning margins from the difference between the cost of achieving the end state and the inputs. 
 
 ## Sponsor
 The owner of the tokens to be used for locks in a resource lock.

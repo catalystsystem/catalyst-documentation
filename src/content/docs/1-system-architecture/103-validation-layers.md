@@ -49,13 +49,14 @@ Notice! While this has been designed for explicit verification, optimistic valid
 
 ## Implemented Validation Interfaces
 
-There are two types of validation interfaces:
+There are three types of validation interfaces:
 1. Self-serve: Validation interfaces where the submission of the payload generates an off-chain proof that has to be collected and submitted on the input chain.
-2. Automatic: Validation interfaces where the submission of the payload automatically delivers the associated proof on the input chain.
+2. Sponsored: Like a self-serve validation interface except someone is relaying for you.
+3. Automatic: Validation interfaces where the submission of the payload automatically delivers the associated proof on the input chain.
 
-Currently, two self-serve validation interfaces are implemented, while no automatic interfaces are supported.
+Currently, two sponsored validation interfaces are implemented.
 
-### [Wormhole](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (self-serve)
+### [Wormhole](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (sponsored)
 
 The Wormhole implementation is based on the broadcast functionality of Wormhole. A group of payloads can be collected and [packed into a larger message](https://github.com/catalystsystem/catalyst-intent/blob/fcdbdc6a77734ddc56be0e5de737f324cbba670d/src/libs/MessageEncodingLib.sol#L30-L44):
 
@@ -74,9 +75,11 @@ This message is then emitted to the Wormhole guardian set. Once the associated p
 
 Notice that the Wormhole implementation uses a more efficient validation algorithm than Wormhole's `Implementation.sol`.
 
-Solvers wanting to support orders using the Wormhole validation layer need to listen to the Guardian gossip network to collect proofs.
+LI.FI will relay Wormhole proofs initially.
 
-### [Polymer](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (self-serve)
+Solvers wanting to support self-relaying of orders using the Wormhole validation layer need to listen to the Guardian gossip network to collect proofs.
+
+### [Polymer](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (sponsored)
 
 Polymer allows validating specific events. As a result, the fill event is parsed:
 ```solidity
@@ -89,7 +92,9 @@ and converted into the appropriate payload for the input settlement layer:
 bytes32 payloadHash = _proofPayloadHash(orderId, solver, timestamp, output);
 ```
 
-Solvers wanting to support orders using the Polymer validation layer need to implement the Polymer API to collect relevant event proofs.
+Polymer will relay orders for solvers.
+
+Solvers wanting to self-relay orders using the Polymer validation layer need to implement the Polymer API to collect relevant event proofs.
 
 ### [Bitcoin](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/bitcoin/BitcoinOracle.sol) (self-serve)
 

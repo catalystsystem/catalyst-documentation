@@ -92,10 +92,10 @@ To validate an order, ensure that the sponsor and allocator signatures are valid
 
 Catalyst allows highly customizable orders. As a result, you may want to add further validation to ensure that you support the order being relayed to you. As a result, it is important to properly validate orders. 
 
-Below the term whitelisted will be used to describe trusted and validated by **you** or **solvers**. When it is written that a token _has_ to be whitelisted, it means **you** trust the token. If a validation layer is whitelisted, it means **you** trust the validation layer, etc.
-Whitelisted does not mean permissioned by a central entity.
+Below the term whitelisted will be used to describe trusted and validated by **you**. When it is written that a token _has_ to be whitelisted, it means **you** trust the token. If a validation layer is whitelisted, it means **you** trust the validation layer, etc.
+Whitelisted does not mean permissioned by a central entity, it means trusted by **you**.
 
-The following is an attempt at an exhausive list of validations that solvers have to implement. Note! While this list seems exhaustive, you likely do some of these already.
+The following is an attempt at an exhausive list of validations that solvers have to implement. Note! While this list seems excessive, you likely do some of these already.
 
 1. `fillDeadline` Ensure that you have sufficient time to fill the order:
     - Time to fill on destination chain, including potential source chain finality.
@@ -104,25 +104,25 @@ The following is an attempt at an exhausive list of validations that solvers hav
     - Time to send message validation proof to input chain.
     - Time to claim order after validation has been delivered.  
 3. Validation layer. Ensure that you support submitting proofs (and if not automatic, also relaying) to the validation layer. Additionally, the `localOracle` and `remoteOracle`s needs to be of the same validation layer.
-4. Ensure that you have whitelisted every single `input` token. If one input token is malicious the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure that neither you nor the sender is on a blacklist.
-5. Ensure that the potential reset period for a resource lock extends beyond the fillDeadline AND there is no active withdrawal.
-6. Ensure that the allocatorID is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
-    - The allocatorID is part of the lock tag for the inputs. (first 12 bytes).
+4. Ensure that you have whitelisted every single `input` token. If one input token is malicious the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure that you is not on a blacklist.
+5. Ensure that the potential `reset period` for a resource lock extends beyond the `fillDeadline` AND there is no active withdrawal.
+6. Ensure that the `allocatorID` is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
+    - The allocatorID is part of the `lock tag` for `inputs`. (first 12 bytes).
     - Optionally, ensure that the user has sufficient tokens. This should have been validated by the allocator though.
 7. For each output:
     1. `output.chainId` is whitelisted.
     2. `remoteOracle` and `localOracle` has been correct configured regarding `originChainId` and `output.chainId`. The config is immutable so this can be done once for each pair.
     3. `output.remoteFiller` is whitelisted.
-    4. `output.fulfillmentContext` is decodeable and the order type is supported and compatible with `output.remoteFiller`.
+    4. `output.fulfillmentContext` is decodable and the order type is supported and compatible with `output.remoteFiller`.
     5. `output.token` is whitelisted. Additionally, for blacklistable tokens like USDC, ensure that neither you nor the recipient is on a blacklist.
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, that you can execute it and other outputs atomically. For output on different chains, you may have to whitelist recipients if there is `calldata`.
-        - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted.
+        - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree.
 
 8. If the order has multiple outputs, ensure that you can fill all outputs and the first output is set to your solver identifier.
-9. Validate that the sponsor signature resolves via an ECDSA recover. Otherwise you may have to submit the registration on-chain.
-10. Validate the allocator signature. You may have to do an on-chain call.
-11. Validate that the allocator nonce (order nonce) has not been spent previously.
+9. Validate that the `sponsor signature` resolves via an ECDSA recover. Otherwise you may have to submit the registration on-chain.
+10. Validate the `allocatorData`. You may have to do an on-chain call.
+11. Validate that the allocator `nonce` has not been spent previously.
 
 
 If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing strange tokens.
