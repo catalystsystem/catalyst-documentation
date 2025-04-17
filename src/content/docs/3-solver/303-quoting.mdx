@@ -38,6 +38,17 @@ Solvers can broadcast their available liquidity and pricing information in the f
 }
 ```
 
+Prices are specified in an abstract intermediary that has to be consistent between **your** quotes. We recommended using USDC. Everything is integer priced. Make sure that your decimals are correct. The final quote will be derived as: $Quote  = \frac{\left(inputAmount - inputFee\right) \cdot inputPrice}{outputPrice} - outputFee$
+
+
+:::caution
+It is important to factor token decimals into your quotes as otherwise assets will be priced incorrectly. 
+For a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
+
+$$Quote  = \frac{\left(1000'000'000 - 1'000'000\right) \cdot 1'000'000'000'000'000'000}{1500'000'000} - outputFee = 666'666'666'666'666'666 = 0.67\ Ether$$
+:::
+
+
 It is important that solvers update their quotes periodically as market conditions change with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
 
 :::note[You can overwrite old quotes by sending new quotes]
