@@ -23,114 +23,10 @@ The Catalyst order server is a helpful intermediary that allows users to submit 
 
 While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that – _for on-chain orders_ – **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
 
-## 1. Authentication
 
-While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some order server's API services.
-All solvers need to be authenticated with the Catalyst order server to be able to push their inventory to the order server. Without it, the order server won't be able to offer your quotes to users.
-Authentication is handled via API tokens that provide secure access to the order server's protected API services.
+## Order subscription
 
-##### Obtaining API Access
-
-To get your API token please reach out to the order server team.
-
-##### Using Your API Token
-
-If you have an API token, it must be included in all requests to the order server for reputation purposes:
-
-- For HTTP requests: Include the token in the request headers as `x-api-key: YOUR_API_TOKEN`
-
-## 2. Quotes broadcasting
-
-To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
-This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
-
-Solvers can broadcast their available liquidity and pricing information in the following format:
-
-```json
-// example of 2 quote chunks
-{
-  "chainId": 1, // Ethereum
-  "asset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
-  "fromPrice": "1000000", // price of token in USDC when sold to the solver
-  "toPrice": "1100000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in USDC when sold to the solver
-  "toCost": "1000", // cost of token in USDC when bought from the solver
-  "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // optional minimum amount
-  "expiry": 1713296400 // quote expires at this timestamp
-}
-
-{
-  "chainId": 8453, // Base
-  "asset": "0xA0b86991c...", // USDC on Base, address(0) for native tokens
-  "fromPrice": "9900000", // price of token in USDC when sold to the solver
-  "toPrice": "1000000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in USDC when sold to the solver
-  "toCost": "1000", // cost of token in USDC when bought from the solver
-  "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // optional minimum amount
-  "expiry": 1713296400 // quote expires at this timestamp
-}
-```
-
-It is important that solvers update their quotes periodically as market conditions change with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
-
-:::note[You can overwrite old quotes by sending new quotes]
-Overwriting quotes allows you to send longer lived quotes, updating them as markets evolve. Alternatively, you can send very short lived quotes then preemtivly update your quotes.
-:::
-
-By broadcasting quotes in this manner, solvers can:
-
-- Efficiently communicate their available liquidity across multiple chain and token pairs
-- Set their own pricing and fee structure
-- Define limits on transaction sizes they're willing to process
-- Update their quotes as market conditions change
-- The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
-
-Here's a simple JavaScript example showing how to submit quotes to the Catalyst order server:
-
-```javascript
-// Using fetch API (browser or Node.js with node-fetch)
-async function submitQuote(apiKey, quoteData) {
-  const response = await fetch("order-server-uri/quotes/submit", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify(quoteData),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Error submitting quote: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return await response.json();
-}
-
-// Example usage
-const apiKey = "your-api-key-here";
-const quote = {
-  chainId: 1, // Ethereum
-  asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
-  fromPrice: "1000000", // price of token in USDC when sold to the solver
-  toPrice: "1100000", // price of token in USDC when bought from the solver
-  fromCost: "1000", // cost of token in USDC when sold to the solver
-  toCost: "1000", // cost of token in USDC when bought from the solver
-  maxAmount: 1000000000, // max the solver will handle
-  minAmount: 10000000, // optional minimum amount
-  expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-};
-
-// Submit the quote
-submitQuote(apiKey, quote)
-  .then((response) => console.log("Quote submitted successfully:", response))
-  .catch((error) => console.error("Failed to submit quote:", error));
-```
-
-## 3. Order subscription
+Below we will go over how to collect Catalyst orders. Alternatively see the example solver here: https://github.com/catalystsystem/catalyst-example-solver/blob/main/src/handlers/vm-order.handler.ts
 
 The order subscription system allows solvers to receive real-time order notifications through a WebSocket connection. This subscription-based approach ensures that solvers can immediately process new orders as they enter the system, without needing to continuously poll for updates.
 
@@ -336,19 +232,74 @@ process.on("SIGINT", () => {
 });
 ```
 
-## 4. Order filling
+## Order Validation
 
-#### Evaluating Orders
+Catalyst allows highly customizable orders. As a result, you may want to add further validation to ensure that you support the order being relayed to you. As a result, it is important to properly validate orders. 
 
-After fetching an order, the solver must thoroughly evaluate it to determine its viability and potential execution. To facilitate this evaluation, several contextual pointers are available within the returned order data. Key aspects to consider include:
+Below the term whitelisted will be used to describe trusted and validated by **you**. When it is written that a token _has_ to be whitelisted, it means **you** trust the token. If a validation layer is whitelisted, it means **you** trust the validation layer, etc.
+Whitelisted does not mean permissioned by a central entity, it means trusted by **you**.
 
-1. **Quote Validation**: Use the `OrderDto.quote` field to access the price context, which provides the pricing details for the inputs and outputs of the order. If you trust the order server, you can primarily rely on this quote to validate the order’s pricing. However, it’s crucial to verify that the solver supports the specific origin chain (`OrderDto.order.originChainId`) and output chains (`OrderDto.order.outputs[...].chainId`) as well as their respective tokens (`input[...][0]` and `output[].token`). These parameters are guaranteed to be present across all order types.
+The following is an attempt at an exhausive list of validations that solvers have to implement. Note! While this list seems excessive, you likely do some of these already.
+
+1. `fillDeadline` Ensure that you have sufficient time to fill the order:
+    - Time to fill on destination chain, including potential source chain finality.
+2. `expiry` Ensure that you have sufficient time to fill, relay, and claim the order:
+    - Time to fill on destination chain, including potential source chain finality.
+    - Time to send message validation proof to input chain.
+    - Time to claim order after validation has been delivered.  
+3. Validation layer. Ensure that you support submitting proofs (and if not automatic, also relaying) to the validation layer. Additionally, the `localOracle` and `remoteOracle`s needs to be of the same validation layer.
+4. Ensure that you have whitelisted every single `input` token. If one input token is malicious the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure that you is not on a blacklist.
+5. Ensure that the potential `reset period` for a resource lock extends beyond the `fillDeadline` AND there is no active withdrawal.
+6. Ensure that the `allocatorID` is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
+    - The allocatorID is part of the `lock tag` for `inputs`. (first 12 bytes).
+    - Optionally, ensure that the user has sufficient tokens. This should have been validated by the allocator though.
+7. For each output:
+    1. `output.chainId` is whitelisted.
+    2. `remoteOracle` and `localOracle` has been correct configured regarding `originChainId` and `output.chainId`. The config is immutable so this can be done once for each pair.
+    3. `output.remoteFiller` is whitelisted.
+    4. `output.fulfillmentContext` is decodable and the order type is supported and compatible with `output.remoteFiller`.
+    5. `output.token` is whitelisted. Additionally, for blacklistable tokens like USDC, ensure that neither you nor the recipient is on a blacklist.
+    6. You have sufficient tokens for `output.amount`.
+    7. If the output has `calldata`, that you can execute it and other outputs atomically. For output on different chains, you may have to whitelist recipients if there is `calldata`.
+        - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree.
+
+8. If the order has multiple outputs, ensure that you can fill all outputs and the first output is set to your solver identifier.
+9. Validate that the `sponsor signature` resolves via an ECDSA recover. Otherwise you may have to submit the registration on-chain.
+10. Validate the `allocatorData`. You may have to do an on-chain call.
+11. Validate that the allocator `nonce` has not been spent previously.
+
+
+If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing strange tokens.
 
 :::note
 Tokens inputs are provided as uint256. This is a standard format for resource locks and cross-chain addresses. For EVM, the first 12 bytes is the lock tag and the address is the last 20 bytes.
 :::
 
-Evaluating orders carefully ensures that solvers can accurately determine the feasibility of executing an order, adhere to exclusivity rules, and avoid conflicts, thereby maintaining the integrity and efficiency of the order fulfillment process.
+### Signature Validation
+
+The `CatalystCompactOrder` will be used to interface all functions on the input chain. Additionally, once hydrated with a signature, it allows one to verify the validity of an order.
+
+The `CatalystCompactOrder` struct will be signed and stored as a witness in the appropriate lock/claim structure. For TheCompact, this is:
+
+```solidity
+struct BatchCompact {
+    address arbiter; // Associated settlement contract
+    address sponsor; // CatalystCompactOrder.user
+    uint256 nonce; // CatalystCompactOrder.nonce
+    uint256 expires; // CatalystCompactOrder.fillDeadline
+    uint256[2][] idsAndAmounts; // CatalystCompactOrder.inputs
+    CatalystWitness witness;
+}
+
+struct CatalystWitness {
+    uint32 fillDeadline; // CatalystCompactOrder.fillDeadline
+    address localOracle; // CatalystCompactOrder.localOracle
+    OutputDescription[] outputs; // CatalystCompactOrder.outputs
+}
+```
+
+To validate an order, ensure that the sponsor and allocator signatures are valid for this EIP-712 signed structure.
+
 
 #### On-chain Order Broadcast
 

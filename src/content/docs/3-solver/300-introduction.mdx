@@ -23,17 +23,36 @@ As a solver in the cross-chain ecosystem, you're likely focused on:
 
 ## Solving Catalyst
 
-Catalyst is an entirely permissionless system. Since the system is componentized and components have no inherent trust elements with other components, they can be mixed and matched as needed by users. As a result, it is important that you validate orders in their entirety once received.
+Catalyst is an entirely permissionless system. Since the system is componentized and components have no inherent trust elements with other components, they can be mixed and matched as desired by users. As a result, it is important that you validate orders in their entirety once received.
 
 The general Catalyst flow is as follows:
 
+import { Steps } from '@astrojs/starlight/components';
+
+<Steps>
+
 1. The sponsor signs a Catalyst-compatible lock and sends it to the Catalyst order server.
+
 2. The Catalyst order server preliminarily validates the order and obtains the allocator co-signature for the order. It is then broadcasted to solvers.
+
 3. A solver submits the order's output to the output settlement contract, starting the verification layer.
+
+    :::note[[Output Settlement](/architecture/output)]
+    The output settlement is denoted as the `remoteFiller` in the order struct.
+    :::
+
 4. The proof is delivered to the input chain through the validation layer.
+
+    :::note[[Validation Layer](/architecture/validation)]
+    The validation layer is denoted as the `localOracle` and `remoteOracle` in the order struct.
+    :::
+
 5. The solver submits the order to the input settlement contract, verifying the delivery and unlocking the associated input tokens.
 
-### Orders
+</Steps>
+
+
+### Collecting Orders
 
 The Catalyst system supports the `CatalystCompactOrder` structure across all VMs:
 
@@ -49,7 +68,7 @@ struct CatalystCompactOrder {
 }
 ```
 
-Where `OutputDescription` is defined as:
+Where `uint256[2][] inputs === [uint256 tokenId, uint256 amount][]` and `OutputDescription`:
 
 ```solidity
 struct OutputDescription {
@@ -64,9 +83,7 @@ struct OutputDescription {
 }
 ```
 
-To validate an order, ensure that the sponsor and allocator signatures are valid for the EIP-712 signed structure.
-
-## Collecting Orders
+The `CatalystCompactOrder` will be used to interface all functions on the input chain. Additionally, once hydrated with a signature, it allows one to verify the validity of an order.
 
 Catalyst offers two ways of receiving orders:
 
@@ -84,12 +101,6 @@ To fill Catalyst orders, you must support the Output Settlement interfaces. Each
 The delivery of assets depends on the Output Settlement Interface associated with an order. The Output Settlement Interface can be read from the order: `orderDto.order.remoteFiller`.
 
 [View EVM Order Filling Guide →](/solver/evm)
-
-## Filling BTC Orders
-
-Catalyst supports Bitcoin orders. Filling Bitcoin swaps is technically more involved than EVM swaps. If you are already filling EVM swaps and are interested in filling BTC swaps, reach out and we can provide additional guidance.
-
-[View BTC Order Filling Guide →](/solver/btc)
 
 ## Settling Orders
 
