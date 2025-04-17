@@ -61,12 +61,16 @@ Solvers can broadcast their available liquidity and pricing information in the f
 
 It is important that solvers update their quotes periodically as market conditions change with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
 
+:::note[You can overwrite old quotes by sending new quotes]
+Overwriting quotes allows you to send longer lived quotes, updating them as markets evolve. Alternativly, you can send very short lived quotes then preemtivly update your quotes.
+:::
+
 By broadcasting quotes in this manner, solvers can:
 
 - Efficiently communicate their available liquidity across multiple chain and token pairs
 - Set their own pricing and fee structure
 - Define limits on transaction sizes they're willing to process
-- Update their quotes periodically as market conditions change
+- Update their quotes as market conditions change
 - The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
 
 Here's a simple JavaScript example showing how to submit quotes to the Catalyst order server:
@@ -121,6 +125,7 @@ When subscribing to orders, solvers receive structured data containing all neces
 Below are the key types and implementation details for setting up an order subscription:
 
 ```typescript
+
 // misc types
 interface CatalystEvent<T> {
   event: CatalystWsEventType;
@@ -141,11 +146,56 @@ export enum CatalystWsEvent {
   USER_ORDER_NON_VM = "user:non-vm-order-submit",
 }
 
-/**
- * CATALYST V3
- */
+export interface CatalystQuoteRequestData {
+  quoteRequestId: string;
+  fromChain: string;
+  toChain: string;
+  fromAsset: string;
+  toAsset: string;
+  expirationTime: string;
+  amount: string;
+}
 
-// TODO: update this meta, some values are outdated
+// TODO: this should contain the orderId so solver's don't have to derive it.
+export interface CatalystOrder {
+  order: CompactOrder;
+  quotes: QuoteContext;
+  meta: CatalystOrderMeta;
+  sponsorSignature: string;
+  allocatorSignature: string;
+}
+
+export interface QuoteContext {
+  toAsset: string;
+  toPrice: string;
+  discount: string;
+  fromAsset: string;
+  fromPrice: string;
+  intermediary: string;
+}
+
+export interface CompactOrder {
+  type: "CompactOrder"; // Used to identify this as a compact order
+  user: string;
+  nonce: number;
+  originChainId: number;
+  fillDeadline: number;
+  localOracle: string;
+  inputs: [number, number][];
+  outputs: OutputDescription[];
+}
+
+export interface OutputDescription {
+  remoteOracle: string;
+  remoteFiller: string;
+  token: string;
+  amount: number;
+  recipient: string;
+  chainId: number;
+  remoteCall: string;
+  fulfillmentContext: string;
+}
+
 export interface CatalystOrderMeta {
   submitTime: number;
   orderIdentifier?: string;
@@ -168,35 +218,6 @@ export interface CatalystOrderMeta {
   provenAt?: Date;
   failedAt?: Date;
   expiredAt?: Date;
-}
-
-export interface OutputDescription {
-  remoteOracle: string;
-  remoteFiller: string;
-  token: string;
-  amount: number;
-  recipient: string;
-  chainId: number;
-  remoteCall: string;
-  fulfillmentContext: string;
-}
-
-export interface CompactOrder {
-  user: string;
-  nonce: number;
-  originChainId: number;
-  fillDeadline: number;
-  localOracle: string;
-  inputs: [number, number][];
-  outputs: OutputDescription[];
-}
-
-export interface CatalystOrder {
-  order: CompactOrder;
-  quotes: QuoteContext;
-  meta: CatalystOrderMeta;
-  sponsorSignature: string;
-  allocatorSignature: string;
 }
 
 import { WebSocket } from "ws";
@@ -308,16 +329,23 @@ process.on("SIGINT", () => {
 
 After fetching an order, the solver must thoroughly evaluate it to determine its viability and potential execution. To facilitate this evaluation, several contextual pointers are available within the returned order data. Key aspects to consider include:
 
-1. **Quote Validation**: Use the `OrderDto.quote` field to access the price context, which provides the pricing details for the inputs and outputs of the order. If you trust the order server, you can primarily rely on this quote to validate the order’s pricing. However, it’s crucial to verify that the solver supports the specific origin chain (`OrderDto.order.originChainId`) and output chains (`OrderDto.order.orderData.outputs[...].chainId`) as well as their respective tokens (`input[].token` and `output[].token`). These parameters are guaranteed to be present across all order types.
+1. **Quote Validation**: Use the `OrderDto.quote` field to access the price context, which provides the pricing details for the inputs and outputs of the order. If you trust the order server, you can primarily rely on this quote to validate the order’s pricing. However, it’s crucial to verify that the solver supports the specific origin chain (`OrderDto.order.originChainId`) and output chains (`OrderDto.order.outputs[...].chainId`) as well as their respective tokens (`input[...][0]` and `output[].token`). These parameters are guaranteed to be present across all order types.
+
+:::note
+Tokens inputs are provided as uint256. This is a standard format for resource locks and cross-chain addresses. For EVM, the first 12 bytes is the lock tag and the address is the last 20 bytes.
+:::
 
 Evaluating orders carefully ensures that solvers can accurately determine the feasibility of executing an order, adhere to exclusivity rules, and avoid conflicts, thereby maintaining the integrity and efficiency of the order fulfillment process.
 
 #### On-chain Order Broadcast
 
-Output settlement schemes supporting on-chain orders like [`CompactSettlerWithDeposit.sol`](/architecture/input/#with-deposit) allow anyone to broadcast and collect orders on-chain through the `Deposit` event:
+Output settlement schemes supporting on-chain orders like [`CompactSettlerWithDeposit.sol`](/architecture/input/#with-deposit) or the [LI.FI facet](https://github.com/reednaa/lifi-contracts/blob/catalyst/src/Facets/CatalystFacet.sol) allow anyone to broadcast and collect orders on-chain through either `Deposited` event:
 
 ```solidity
-event Deposited(bytes32 orderId, CatalystCompactOrder order);
+/// @dev LI.FI facet since it does not have access to the orderId.
+event Deposited(CatalystCompactOrder order);
+/// @dev Catalyst Settler since it does has access to the orderId.
+event Deposited(bytes32 indexed orderId, CatalystCompactOrder order);
 ```
 
 :::caution
