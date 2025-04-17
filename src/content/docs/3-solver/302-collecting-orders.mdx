@@ -41,20 +41,34 @@ If you have an API token, it must be included in all requests to the order serve
 
 ## 2. Quotes broadcasting
 
-To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`. This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
+To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
+This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
 
 Solvers can broadcast their available liquidity and pricing information in the following format:
 
 ```json
+// example of 2 quote chunks
 {
-  "fromChain": 1, // Ethereum
-  "toChain": 8453, // Base
-  "fromAsset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
-  "toAsset": "0x123...", // USDC on Base, address(0) for native tokens
-  "price": 0.999, // how much toToken per fromToken
-  "fixedFee": 0.5, // e.g., 0.5 USDC flat fee
+  "chainId": 1, // Ethereum
+  "asset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
+  "fromPrice": "1000000", // price of token in USDC when sold to the solver
+  "toPrice": "1100000", // price of token in USDC when bought from the solver
+  "fromCost": "1000", // cost of token in USDC when sold to the solver
+  "toCost": "1000", // cost of token in USDC when bought from the solver
   "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 10000000, // optional minimum amount
+  "minAmount": 1000000, // optional minimum amount
+  "expiry": 1713296400 // quote expires at this timestamp
+}
+
+{
+  "chainId": 8453, // Base
+  "asset": "0xA0b86991c...", // USDC on Base, address(0) for native tokens
+  "fromPrice": "9900000", // price of token in USDC when sold to the solver
+  "toPrice": "1000000", // price of token in USDC when bought from the solver
+  "fromCost": "1000", // cost of token in USDC when sold to the solver
+  "toCost": "1000", // cost of token in USDC when bought from the solver
+  "maxAmount": 1000000000, // max the solver will handle
+  "minAmount": 1000000, // optional minimum amount
   "expiry": 1713296400 // quote expires at this timestamp
 }
 ```
@@ -99,14 +113,14 @@ async function submitQuote(apiKey, quoteData) {
 // Example usage
 const apiKey = "your-api-key-here";
 const quote = {
-  fromChain: 1,
-  toChain: 8453,
-  fromAsset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
-  toAsset: "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA", // USDC on Base
-  price: 0.999,
-  fixedFee: 0.5,
-  maxAmount: 1000000000,
-  minAmount: 10000000,
+  chainId: 1, // Ethereum
+  asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
+  fromPrice: "1000000", // price of token in USDC when sold to the solver
+  toPrice: "1100000", // price of token in USDC when bought from the solver
+  fromCost: "1000", // cost of token in USDC when sold to the solver
+  toCost: "1000", // cost of token in USDC when bought from the solver
+  maxAmount: 1000000000, // max the solver will handle
+  minAmount: 10000000, // optional minimum amount
   expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
 };
 
@@ -125,7 +139,6 @@ When subscribing to orders, solvers receive structured data containing all neces
 Below are the key types and implementation details for setting up an order subscription:
 
 ```typescript
-
 // misc types
 interface CatalystEvent<T> {
   event: CatalystWsEventType;
