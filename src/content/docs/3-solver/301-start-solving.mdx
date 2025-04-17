@@ -113,7 +113,7 @@ The following is an attempt at an exhausive list of validations that solvers hav
     1. `output.chainId` is whitelisted.
     2. `remoteOracle` and `localOracle` has been correct configured regarding `originChainId` and `output.chainId`. The config is immutable so this can be done once for each pair.
     3. `output.remoteFiller` is whitelisted.
-    4. `output.fulfillmentContext` is decodeable and the order type is supported and compatible with `output.remoteFiller`.
+    4. `output.fulfillmentContext` is decodable and the order type is supported and compatible with `output.remoteFiller`.
     5. `output.token` is whitelisted. Additionally, for blacklistable tokens like USDC, ensure that neither you nor the recipient is on a blacklist.
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, that you can execute it and other outputs atomically. For output on different chains, you may have to whitelist recipients if there is `calldata`.

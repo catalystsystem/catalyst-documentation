@@ -50,7 +50,7 @@ Solvers can broadcast their available liquidity and pricing information in the f
   "fromChain": 1, // Ethereum
   "toChain": 8453, // Base
   "fromAsset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
-  "toAssset": "0x123...", // USDC on Base, address(0) for native tokens
+  "toAsset": "0x123...", // USDC on Base, address(0) for native tokens
   "price": 0.999, // how much toToken per fromToken
   "fixedFee": 0.5, // e.g., 0.5 USDC flat fee
   "maxAmount": 1000000000, // max the solver will handle
@@ -98,7 +98,7 @@ const quote = {
   fromChain: 1,
   toChain: 8453,
   fromAsset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
-  toAssset: "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA", // USDC on Base
+  toAsset: "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA", // USDC on Base
   price: 0.999,
   fixedFee: 0.5,
   maxAmount: 1000000000,
@@ -128,7 +128,7 @@ interface CatalystEvent<T> {
 }
 
 export enum CommonWsEvent {
-  // Common hearbeat events
+  // Common heartbeat events
   PING = "ping",
   PONG = "pong",
   TCP_PONG = "tcp-pong",
