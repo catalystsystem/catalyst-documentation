@@ -23,7 +23,7 @@ The input settlement scheme is responsible for managing user deposits and releas
 
 Both are resource locks supporting fill-first flows, though Catalyst also supports ordinary flows.
 
-Catalyst imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through the validation layer by either [`isProven` or `efficientRequireProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol). If an order contains multiple outputs and the outputs are filled by different solvers, the filler of the first output in the order specification shall be the canonical solver.
+Catalyst imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through validation layers by either calling [`isProven` or `efficientRequireProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification shall be the canonical solver.
 
 [Learn more about Input Settlement →](/architecture/input)
 
@@ -51,8 +51,8 @@ The validation layer ferries valid payloads from the output chain to the input c
 
 Any validation layer can be added to Catalyst as long as it supports validating a payload from a remote chain. Currently implemented validation layers include:
 
-- [**Wormhole**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (self-serve)
-- [**Polymer**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (self-serve)
+- [**Wormhole**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (sponsored by LI.FI)
+- [**Polymer**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (sponsored by Polymer)
 - [**Bitcoin**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/bitcoin/BitcoinOracle.sol) (self-serve)
 
 It's expected that before making messages, the validation layer checks if one or more payloads are valid and then ships them to the input chain:
@@ -65,7 +65,7 @@ function submit(address proofSource, bytes[] calldata payloads) external payable
 	_submit(proofSource, payloads);
 }
 ```
-How validation layers pass the information to the input chain is scoped. They may use custom message encodings, custom relaying properties, custom interfaces, or other special integration concerns.
+How validation layers pass the information to the input chain is not scoped. They may use custom message encodings, custom relaying properties, custom interfaces, or other special integration concerns.
 
 On the input chain, it is expected that the validation layer validates the payload(s) through a virtual machine local hash:
 ```solidity
@@ -152,7 +152,7 @@ Encoded FillDescription
      + FULFILLMENT_CONTEXT           168+RC_LENGTH   (LENGTH bytes)
 ```
 :::note
-No assumptions are ever made on how validation layers pass messages between each other. They can pack fill descriptions however they like.
+No assumptions are ever made on how validation layers pass messages between itself. They can pack fill descriptions however they like. [Example of a packed payload](https://github.com/catalystsystem/catalyst-intent/blob/main/src/libs/MessageEncodingLib.sol#L13-L19).
 :::
 ### Atomic Swaps and HTLCs as validation layers.
 
@@ -165,3 +165,5 @@ As interfaces and validation layers are not standardized, each new order type, v
 ### Optimistic Validation layers
 
 The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have an on-chain storage. This increases the gas cost. Ideally the specification should define a way for 1 proof to validate multiple _orders_, not just outputs.
+
+This would likely involve  [`isProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol) using merkle trees or similar constructions to pass validated messages

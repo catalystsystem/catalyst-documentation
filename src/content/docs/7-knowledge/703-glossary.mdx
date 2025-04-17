@@ -35,7 +35,7 @@ See [Intent Issuer](#intent-issuer)
 An issuance of a desired action. Intents are often used to describe swaps but can also describe desired cross-chain interactions. Unlike swaps, intents should generally be composable. Intents are usually self-contained, meaning they describe both the desired end state and the payment to achieve that state; the output and input, respectively.
 
 ## Intent Issuer
-Someone who issues intents for a cross-chain intent system.
+Someone who issues intents for a cross-chain intent system. The intent issuers specifies how the intent is configured. It is then up to [solvers](#solver) to determine whether or not they will fill the intent.
 
 ## Optimistic
 A validation method that assumes statements are true unless disputed. This 

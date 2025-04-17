@@ -13,7 +13,8 @@ export default defineConfig({
     "/cross-cats/": "/",
     "/cross-cats/solver/": "/solver/intro",
     "/solver/auction/": "/solver/auctions/",
-    "/knowledge/glossary/": "/glossary/"
+    "/knowledge/glossary/": "/glossary/",
+    "/architecture/erc7683": "/architecture/open"
   },
   site: `${process.env["CF_PAGES_URL"] ?? "https://docs.catalyst.exchange"}`,
   markdown: {

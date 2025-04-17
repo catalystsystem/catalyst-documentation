@@ -5,9 +5,13 @@ description: "Catalyst has two ways of emitting orders: 1. On-chain through the 
 sidebar:
   order: 2
   badge:
-    text: In Progress
-    variant: note
+    text: Devnet!
+    variant: caution
 ---
+
+:::caution[Devnet!]
+Catalyst is currently on devnet! There will be one breaking change to the order struct as we [migrate](https://github.com/catalystsystem/catalyst-intent/pull/92) to [TheCompact v1](https://github.com/Uniswap/the-compact/pull/65) and contracts will have to be redeployed twice before mainnet.
+:::
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
@@ -17,7 +21,7 @@ The Catalyst order server is a helpful intermediary that allows users to submit 
 2. Broadcasts these intents to connected solvers in real-time
 3. Tracks the on-chain status of all transactions necessary for the intent to work end-to-end
 
-While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
+While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that – _for on-chain orders_ – **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
 
 ## 1. Authentication
 
@@ -27,15 +31,11 @@ Authentication is handled via API tokens that provide secure access to the order
 
 ##### Obtaining API Access
 
-To get your API token:
-
-1. Please reach out to our team at [email](mailto:x@x) with the subject "Solver API Access Request"
-2. Include your organization name and a brief description of your solver implementation
-3. Our team will review your request and provide you with a unique API token
+To get your API token please reach out to the order server team.
 
 ##### Using Your API Token
 
-The API token must be included in all requests to the order server:
+If you have an API token, it must be included in all requests to the order server for reputation purposes:
 
 - For HTTP requests: Include the token in the request headers as `x-api-key: YOUR_API_TOKEN`
 
