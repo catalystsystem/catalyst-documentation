@@ -30,7 +30,7 @@ struct OutputDescription {
 ```
 To check if the encoded output description has been validated, the hashed encoded payload should be sent to the appropriate local oracle using the Validation Layer Interface along with relevant resolution details, such as who the solver was.
 
-## CompactSettler (TheCompact & Rhinestone)
+## CompactSettler
 Both Rhinestone and TheCompact work through [`CompactSettler.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/settlers/compact/CompactSettler.sol). Being able to solve for one allows you to solve the other, except that signature and lock validation differ slightly.
 
 The Compact Settler uses the [`CatalystCompactOrder`](https://github.com/catalystsystem/catalyst-intent/blob/fcdbdc6a77734ddc56be0e5de737f324cbba670d/src/settlers/compact/TheCompactOrderType.sol#L6-L14):
@@ -100,7 +100,19 @@ struct AllowOpen {
 
 For how to register intents with Rhinestone, please refer to their documentation.
 
-For TheCompact, `CompactSettler.sol` supports the [`BatchClaimWithWitness`](https://github.com/catalystsystem/catalyst-intent/blob/fcdbdc6a77734ddc56be0e5de737f324cbba670d/test/TestCatalyst.t.sol#L86) claim type. The witness should be the encoded `CatalystCompactOrder`. For further integration assistance, refer to [`TestCatalyst.t.sol::test_entire_flow`](https://github.com/catalystsystem/catalyst-intent/blob/fcdbdc6a77734ddc56be0e5de737f324cbba670d/test/TestCatalyst.t.sol#L206).
+For TheCompact, `CompactSettler.sol` supports `BatchClaim` using claim type. The witness is the difference between the `BatchClaim` and `CatalystCompactOrder`:
+
+```solidity
+struct CatalystWitness {
+    uint32 fillDeadline;
+    address localOracle;
+    OutputDescription[] outputs;
+}
+```
+
+Sign the `BatchClaim` with the CatalystWitness using EIP712 with TheCompact domain separator.
+
+For further integration assistance, refer either to [`TestCatalyst.t.sol::test_entire_flow`](https://github.com/catalystsystem/catalyst-intent/blob/main/test/TestCatalyst.t.sol#L214) or reach out to the team.
 
 #### With Deposit
 
@@ -116,5 +128,5 @@ event Deposited(bytes32 orderId, CatalystCompactOrder order);
 ```
 
 :::note
-Nonces cannot be reused and should be unique.
+Nonces cannot be reused and should be unique for an allocator. Please use your allocator's api to get an appropriate nonce.
 :::

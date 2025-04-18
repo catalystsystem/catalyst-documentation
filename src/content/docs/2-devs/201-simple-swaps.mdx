@@ -9,8 +9,6 @@ sidebar:
 Catalyst is an entirely componentized and permissionless system with no inherent trust elements.
 It is up to integrators to mix and match components as needed.
 
-As a developer, you are interested on how to swap via catalyst.
-
 Catalyst offers two ways to swap:
 
 1. Off-chain relay, via the order server (recommended)
@@ -19,20 +17,14 @@ Catalyst offers two ways to swap:
 Catalyst recommends that you use off-chain relay for a cheaper and more seamless experience.
 Though, for a fully decentralised system the on-chain deposit may provide advantages for you.
 
-## Off-chain relay
-
-To use the off-chain relay you need to interact with the order server. The order server is a central hub that collects user intents and broadcasts them to solvers.
-It also collects solver inventories and provides a way to get a quote for a given intent.
-
 :::note
 The order server is designed as a convenience and **is not mandatory**.
 If you want you can create create the order on-chain and implement your own logic if needed.
 :::
 
-### 1. Getting a quote
+### Getting a quote
 
-Before swapping you need to get a quote for your swap.
-You can do it in this way
+You can implement your own quoting logic but the order server allows you to query Catalyst solvers' inventory. This provides you with a better execution guarantee.
 
 ```typescript
 const getQuote = async () => {
@@ -51,7 +43,7 @@ const getQuote = async () => {
       toAsset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Token on Base Sepolia
 
       // Amount in the smallest unit of the token
-      amount: "3000000", // Amount with appropriate decimals
+      amount: "3000000", // Amount with appropriate decimals. For USDC it is 6.
     }),
   });
 
@@ -70,9 +62,82 @@ const getQuote = async () => {
 };
 ```
 
-### 2. Submitting an order
+## Order structure
 
-Catalyst works with resource locks, so make sure that the funds are locked and available on the source chain.
+A Catalyst order generally follows the structure of the `CatalystCompactOrder`:
+
+```solidity
+struct CatalystCompactOrder {
+    /** @dev Pays for the inputs of the order. If the order fails, will be recipient of the refund. */
+    address user;
+    /** @dev Allocator nonce for the order. Should be unique otherwise it won't be signed by the allocator. */
+    uint256 nonce;
+    /** @dev The chainId (canonical) of the input chain. */
+    uint256 originChainId;
+    /** @dev The expiry of the lock. Enough time for the fill and validation needs to be provided. */
+    uint32 fillDeadline;
+    /** @dev Address of the validation layer on the origin chain. */
+    address localOracle;
+    uint256[2][] inputs;
+    OutputDescription[] outputs;
+}
+```
+
+The `CatalystCompactOrder` needs to be appropriately signed. For `TheCompact` settlement interface, use the following transformation:
+
+```solidity
+struct BatchCompact {
+    address arbiter; // Associated settlement contract
+    address sponsor; // CatalystCompactOrder.user
+    uint256 nonce; // CatalystCompactOrder.nonce
+    uint256 expires; // CatalystCompactOrder.fillDeadline
+    uint256[2][] idsAndAmounts; // CatalystCompactOrder.inputs
+    CatalystWitness witness;
+}
+
+struct CatalystWitness {
+    uint32 fillDeadline; // CatalystCompactOrder.fillDeadline
+    address localOracle; // CatalystCompactOrder.localOracle
+    OutputDescription[] outputs; // CatalystCompactOrder.outputs
+}
+```
+
+The [sponsor](/glossary#sponsor) (user) shall then sign it as an [EIP-712](https://eips.ethereum.org/EIPS/eip-712) signed structure.
+
+### Inputs
+
+For `TheCompact`, the inputs need to be provided as an array of `[uint256 tokenId, uint256 amount]`. The `tokenId` refers to the `TheCompact` encoded tokenId, the first 12 bytes is a [lock tag](https://github.com/Uniswap/the-compact/blob/v1/src/lib/IdLib.sol#L220-L224) and the last 20 bytes is the token address.
+
+### Output
+
+```solidity
+struct OutputDescription {
+    bytes32 remoteOracle;
+    bytes32 remoteFiller;
+    uint256 chainId;
+    bytes32 token;
+    uint256 amount;
+    bytes32 recipient;
+    bytes remoteCall;
+    bytes fulfillmentContext;
+}
+```
+
+Note that `OutputDescription.remoteOracle` and `CatalystCompactOrder.localOracle` need to match. Together, they define the validation layer used. Each order should only use one validation layer, which can be an aggregation of AMBs.
+
+`remoteFiller` specifies the output type. For limit orders, use the `CoinFiller` and set `fulfillmentContext` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `fulfillmentContext` [appropriately](/solver/auctions#dutch-auction).
+
+Specify the token as the `bytes32` identifier. For EVM, the address is left-padded, e.g., `0x000...00abcdef`.
+
+#### RemoteCall
+
+You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `remoteCall` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the [Catalyst Multicaller](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) can be used.
+
+[Learn more about Sub-Calls →](/devs/calls)
+
+## Off-chain relay via resource locks
+
+Off-chain relaying of swaps assumes that you have an existing [resource lock](/glossary#resource-lock) somewhere. This guide we assumes you use [TheCompact](/architecture/input#compactsettler). When using pure resource lock flow, ensure funds are already deposited into the lock. For alternative integrations, refer to the [on-chain flow](#on-chain-relay).
 
 ```typescript
 // Submit an order to the order server
@@ -130,11 +195,9 @@ const submitOrder = async () => {
       },
 
       // EIP-712 signature from the user/sponsor
-      sponsorSignature:
-        "0x9de6ca6df89a582d8c228b25fc84c947b52aac232e6e1d48b8a1f32c0610166226f773a501eda4489cc5d91c25c2b472e505bc3d9862690c18a6c38e8da27f371b",
+      sponsorSignature: "...",
 
-      // Optional allocator signature (if using an allocator)
-      allocatorSignature: "0x",
+      allocatorSignature: "...",
     }),
   });
 
@@ -167,128 +230,10 @@ const submitOrder = async () => {
 
 ## On-chain relay
 
-TODO: add section
+For non-wallet integrators, **on-chain deposits** is the easiest integration. It uses more gas but abstracts the resource lock complexity away: There are 2 ways to do on-chain relaying of swaps:
 
-## Misc
-
-TODO: refactor section
-
-A Catalyst order generally follows the structure of the `CatalystCompactOrder`:
-
-```solidity
-struct CatalystCompactOrder {
-    address user;
-    uint256 nonce;
-    uint256 originChainId;
-    uint32 fillDeadline;
-    address localOracle;
-    uint256[2][] inputs;
-    OutputDescription[] outputs;
-}
-```
-
-Where `uint256[2][] inputs` is equivalent to `[uint256 tokenId, uint256 amount][]` and `OutputDescription` is:
-
-```solidity
-struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
-    uint256 chainId;
-    bytes32 token;
-    uint256 amount;
-    bytes32 recipient;
-    bytes remoteCall;
-    bytes fulfillmentContext;
-}
-```
-
-The `CatalystCompactOrder` needs to be appropriately signed. For `TheCompact` settlement interface, use the following transformation:
-
-```solidity
-struct BatchCompact {
-    address arbiter; // Associated settlement contract
-    address sponsor; // CatalystCompactOrder.user
-    uint256 nonce; // CatalystCompactOrder.nonce
-    uint256 expires; // CatalystCompactOrder.fillDeadline
-    uint256[2][] idsAndAmounts; // CatalystCompactOrder.inputs
-    CatalystWitness witness;
-}
-
-struct CatalystWitness {
-    uint32 fillDeadline; // CatalystCompactOrder.fillDeadline
-    address localOracle; // CatalystCompactOrder.localOracle
-    OutputDescription[] outputs; // CatalystCompactOrder.outputs
-}
-```
-
-The [sponsor](/glossary#sponsor) (user) shall then sign it as an EIP-712 signed structure.
-
-## Order Parameters
-
-### Inputs
-
-For `TheCompact`, the inputs need to be provided as an array of `[uint256 tokenId, uint256 amount]`. The `tokenId` refers to the `TheCompact` encoded tokenId, which contains relevant lock details. See [IdLib.sol::toIdIfRegistered](https://github.com/Uniswap/the-compact/blob/c4776fa3264f7c64b26b5800b5f8d8e651089b0a/src/lib/IdLib.sol#L87-L104).
-
-### Output
-
-```solidity
-struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
-    uint256 chainId;
-    bytes32 token;
-    uint256 amount;
-    bytes32 recipient;
-    bytes remoteCall;
-    bytes fulfillmentContext;
-}
-```
-
-Note that `OutputDescription.remoteOracle` and `CatalystCompactOrder.localOracle` need to match. Together, they define the validation layer used. Each order should only use one validation layer, which can be an aggregation of AMBs.
-
-`remoteFiller` specifies the output type. For limit orders, use the `CoinFiller` and set `fulfillmentContext` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `fulfillmentContext` [appropriately](/solver/auctions#dutch-auction).
-
-Specify the token as the `bytes32` identifier. For EVM, the address is left-padded, e.g., `0x000...00abcdef`.
-
-#### RemoteCall
-
-You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `remoteCall` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the [Catalyst Multicaller](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) can be used.
-
-[Learn more about Sub-Calls →](/devs/calls)
-
-### Structure
-
-Then configure the relevant order structure:
-
-- `address user`: Pays for the inputs of the order. If the order fails, will be recipient of the refund.
-- `uint256 nonce`: Unique order identifier to redeem locks with. If two orders share the same nonce and user, only one can be redeemed.
-- `uint256 originChainId`: The chainId (canonical) of the input chain.
-- `uint32 fillDeadline`: The expiry of the lock. Enough time for the fill and validation needs to be provided.
-- `address localOracle`: Address of the validation layer on the origin chain.
-
-## Broadcasting Order
-
-There are two ways to manage orders:
-
-1. On-chain deposits.
-2. Off-chain relay.
-
-Catalyst recommends that you use off-chain relay for a cheaper and more seamless experience. Though, for a fully decentralised system the on-chain deposit may provide advantages for you.
-
-### On-chain deposits
-
-For non-wallet integrators, **on-chain deposits** is the easiest integration. It uses more gas but abstracts the resource lock complexity away:
-
-```solidity
-function depositFor(CatalystCompactOrder calldata order, ResetPeriod resetPeriod) external;
-```
-
-`resetPeriod` should exceed the expiry window.
-
-### Off-chain relaying
-
-For other integrators, **off-chain relaying** is both the easiest and cheapest integration. Simply use the associated integration endpoint of your wallet of choice and then broadcast the order through the order-server.
-
-```typescript
-TODO: endpoint;
-```
+1. Using the [`CompactSettlerWithDeposit`](localhost:4321/architecture/input/#with-deposit). This provides you with an easy and quick integration at a slight increased gas overhead.
+    ```solidity
+    function depositFor(CatalystCompactOrder calldata order, ResetPeriod resetPeriod) external;
+    ```
+2. Using a custom `depositAndRegisterFor` implementation similar to the [LI.FI facet](https://github.com/reednaa/lifi-contracts/blob/catalyst/src/Facets/CatalystFacet.sol). This requires a slightly more complicated 
