@@ -33,9 +33,9 @@ export default defineConfig({
         dark: "/src/assets/logo_light.svg",
         replacesTitle: true,
       },
-      social: {
-        github: "https://github.com/catalystsystem",
-      },
+      social: [
+        {icon: 'github', label: 'Github', href: "https://github.com/catalystsystem"}
+      ],
       customCss: ["./src/assets/landing.css", "./src/assets/math-fix.css"],
       favicon: "/favicon.ico",
       sidebar: [
