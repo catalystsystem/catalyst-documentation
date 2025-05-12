@@ -262,7 +262,7 @@ The following is an attempt at an exhausive list of validations that solvers hav
         - If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing strange tokens.
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, that you can execute it and other outputs atomically. For output on different chains, you may have to whitelist recipients if there is `calldata`.
-        - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree. If a similer contracts exists on another chain, they also need to be blacklisted.
+        - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree. If a similar contracts exists on another chain, they also need to be blacklisted.
 
 10. If the order has multiple outputs, ensure that you can fill all outputs and the first output is set to your solver identifier. If all outputs are on the same chain, `fillBatch` can be used as a protective measure.
 11. Validate the `allocatorData`. You may have to do an on-chain call.
