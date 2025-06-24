@@ -52,7 +52,7 @@ import { Steps } from '@astrojs/starlight/components';
 
 LI.FI uses 3 order structures, listed from least verbose to most verbose:
 1. `BatchClaim`: Signed intent that allows for claiming input assets.
-2. `StandardOrder`: Definiton of the on-chain containing enough information to conveny the intent.
+2. `StandardOrder`: Definition of the on-chain containing enough information to conveny the intent.
 3. Order Server response: Hydrated order with additional information that may be helpful to solvers.
 
 Unless you are verifying order signatures, you won't touch `BatchClaim`, all on-chain interactions work with `StandardOrder` to standardize interfaces. However `StandardOrder` does not contain enough information to fill intents. As a result, it is hydrated off-chain with `InputSolver`, `signatures`, and more.

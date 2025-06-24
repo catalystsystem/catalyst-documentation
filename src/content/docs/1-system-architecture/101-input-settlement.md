@@ -51,7 +51,7 @@ The two ways to finalize an intent:
 
 ### Intent Registration
 
-While intents are transfered in the structure of `StandardOrder` they are signed as a `BatchClaim` with the following structure:
+While intents are transferred in the structure of `StandardOrder` they are signed as a `BatchClaim` with the following structure:
 
 ```solidity
 struct BatchCompact {

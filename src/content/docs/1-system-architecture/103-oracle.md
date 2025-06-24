@@ -44,7 +44,7 @@ Currently, all supported oracle systems are self-serve.
 
 ### Polymer
 
-Polymer allows validating emitted events. The targed event for validation is the [`OutputFilled`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/BaseOutputSettler.sol#L95) event emitted when an output has been filled.
+Polymer allows validating emitted events. The target event for validation is the [`OutputFilled`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/BaseOutputSettler.sol#L95) event emitted when an output has been filled.
 ```solidity
 event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
 ```
