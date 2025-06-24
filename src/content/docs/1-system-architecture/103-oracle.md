@@ -68,7 +68,7 @@ Notice, the Wormhole implementation uses a more efficient validation algorithm t
 
 ### Bitcoin
 
-Catalyst has a Bitcoin Simplified Payment Validation (SPV) client implementation. The implementation works both as an Output Settlement implementation and as a validation layer.
+LI.FI intent has a Bitcoin Simplified Payment Validation (SPV) client implementation. The implementation works both as an Output Settlement implementation and as a validation layer.
 
 The Bitcoin SPV client requires constant upkeep – the blockchain has to be updated approximately every 10 minutes or whenever a transaction needs to be proven – to properly validate transactions.
 

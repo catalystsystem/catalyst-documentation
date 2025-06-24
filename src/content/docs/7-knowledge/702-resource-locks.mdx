@@ -56,7 +56,7 @@ These systems instead rely on **allocators as arbiters** or resource lock suppor
 
 The advantage of such a system is its simplicity. The third party (whether allocator or GMP) generally handles the entire validation/settlement pipeline, and thus solvers only have to concern themselves with filling orders.
 
-##### Intent system as *arbiter* (Catalyst)
+##### Intent system as *arbiter* (OIF)
 
 In these flows, the intent system is the arbiter and usually describes how the entire system is constructed: output settlement, validation, and input settlement. This makes the system more flexible and customizable.
 
@@ -64,7 +64,7 @@ While these systems may also rely on GMPs, they can also use other – potential
 
 The advantage of such a system is indirectly its complexity. Since more logic is explicitly defined by the system itself, the expressivity of intents can be greater and more specialized.
 
-For more on the resource locks Catalyst supports, read the chapter on [Input Settlement Implementations](/architecture/input).
+For more on the resource locks OIF supports, read the chapter on [Input Settlement Implementations](/architecture/input).
 
 ## Trust Assumptions
 

@@ -10,7 +10,7 @@ sidebar:
 import { Image } from 'astro:assets';
 import intentFlow from '../../../assets/intent-flow.svg';
 
-Catalyst modularizes three components of the cross-chain intent flow:
+LI.FI intent modularizes three components of the cross-chain intent flow:
 
 1. **Input settlement scheme**  – Handles the source chain funds
 2. **Output settlement scheme** – Handles the destination chain funds
@@ -22,11 +22,11 @@ Historically, these components have been intertwined, presenting issues with sca
 
 ### Input Settlement
 
-The input settlement scheme is responsible for managing user deposits and releasing funds to solvers once intents are fulfilled. Catalyst currently implements two input settlement schemes:
+The input settlement scheme is responsible for managing user deposits and releasing funds to solvers once intents are fulfilled. LI.FI intent currently implements one input settlement schemes:
 
 - [**TheCompact**](https://github.com/Uniswap/the-compact) through [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/input/compact/InputSettlerCompact.sol)
 
-Both are resource locks supporting fill-first flows, though Catalyst also supports ordinary flows.
+Resource locks supports both fill-first flows and ordinary flows.
 
 The intent system imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through validation layers by either calling [`efficientRequireProven`](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IOracle.sol#L19-L27). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification shall be the canonical solver.
 
@@ -152,7 +152,7 @@ No assumptions are ever made on how validation layers pass messages between itse
 :::
 ### Atomic Swaps and HTLCs as validation layers.
 
-HTCLs works very differently from ordinary intent schemes as they require a round of strong commitments. This pre-bakes certain system assumptions which cannot be abstracted away through the Catalyst Intent System. As a result, these are not considered.
+HTCLs works very differently from ordinary intent schemes as they require a round of strong commitments. This pre-bakes certain system assumptions which cannot be abstracted away through the OIF Intent System. As a result, these are not considered.
 
 ### Integration Overheads
 

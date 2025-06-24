@@ -15,7 +15,7 @@ Li.FI intent is currently on testnet! Contracts will be redeployed once before m
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-The Catalyst order server is a helpful intermediary that allows users to submit intents (orders) and broadcasts those intents to solvers. It serves as a central hub that:
+The order server is a helpful intermediary that allows users to submit intents (orders) and broadcasts those intents to solvers. It serves as a central hub that:
 
 1. Collects user intents from various sources.
 2. Broadcasts these intents to connected solvers in real-time.
@@ -39,7 +39,7 @@ For order collection, the important event is `user:vm-order-submit`. The Data wi
 
 ## Order Validation
 
-Catalyst allows highly customizable orders. As a result, you want to add further validation to ensure that you support the order being relayed to you. As a result, it is important to properly validate orders. 
+LI.FI intent allows highly customizable orders. As a result, you want to add further validation to ensure that you support the order being relayed to you. As a result, it is important to properly validate orders. 
 
 Below the term whitelisted will be used to describe trusted and validated by **you**. When it is written that a token _has_ to be whitelisted, it means **you** trust the token. If a validation layer is whitelisted, it means **you** trust the validation layer, etc.
 Whitelisted does not mean permissioned by a central entity, it means trusted by **you**.

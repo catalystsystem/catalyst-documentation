@@ -7,7 +7,7 @@ sidebar:
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-To settle Catalyst orders, up to 2 transactions may be required:
+To settle LI.FI intent orders, up to 2 transactions may be required:
 1. Submission of self-serve message validation
 2. Finalizing the order on the resource lock.
 
@@ -30,7 +30,7 @@ The finalize call depends on the [Input Settlement](/architecture/input), but ge
 
 ### CompactSettler
 
-For the CompactSettler (and compliant settlers), you need to deliver the order as you originally received it in `CatalystCompactOrder`, the attached signatures as `bytes.concat(sponsor, allocator)`, the timestamps of the fills (which can be read from the OutputFilled event), and the solver's identifier or address. If there are multiple outputs, always index lists by their position in the order.
+For the CompactSettler (and compliant settlers), you need to deliver the order as you originally received it in `StandardOrder`, the attached signatures as `bytes.concat(sponsor, allocator)`, the timestamps of the fills (which can be read from the OutputFilled event), and the solver's identifier or address. If there are multiple outputs, always index lists by their position in the order.
 
 Then, finalize can be called:
 
@@ -38,16 +38,6 @@ Then, finalize can be called:
 function finaliseSelf(CatalystCompactOrder calldata order, bytes calldata signatures, uint32[] calldata timestamps, bytes32 solver) external;
 
 function finaliseTo(CatalystCompactOrder calldata order, bytes calldata signatures, uint32[] calldata timestamps, bytes32 solver, address destination, bytes calldata call) external;
-
-function finaliseFor(
-    CatalystCompactOrder calldata order,
-    bytes calldata signatures,
-    uint32[] calldata timestamps,
-    bytes32 solver,
-    address destination,
-    bytes calldata call,
-    bytes calldata orderOwnerSignature
-) external;
 ```
 
 :::note

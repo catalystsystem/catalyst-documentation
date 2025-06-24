@@ -24,7 +24,7 @@ export default defineConfig({
   integrations: [
     starlight({
       plugins: [starlightLinksValidator()],
-      title: "Catalyst Documentation",
+      title: "LI.FI Intent Documentation",
       tableOfContents: false,
       editLink: {
         baseUrl: `https://github.com/catalystsystem/catalyst-documentation/edit/${process.env["CF_PAGES_BRANCH"]}`,

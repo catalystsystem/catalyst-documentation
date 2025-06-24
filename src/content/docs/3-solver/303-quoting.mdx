@@ -63,7 +63,7 @@ By broadcasting quotes in this manner, solvers can:
 - Update their quotes as market conditions change
 - The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
 
-Here's a simple JavaScript example showing how to submit quotes to the Catalyst order server:
+Here's a simple JavaScript example showing how to submit quotes to the order server:
 
 ```javascript
 // Using fetch API (browser or Node.js with node-fetch)
@@ -110,7 +110,7 @@ submitQuote(apiKey, quote)
 ## Authentication
 
 While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some order server's API services.
-All solvers need to be authenticated with the Catalyst order server to be able to push their inventory to the order server. Without it, the order server won't be able to offer your quotes to users.
+All solvers need to be authenticated with the order server to be able to push their inventory to the order server. Without it, the order server won't be able to offer your quotes to users.
 Authentication is handled via API tokens that provide secure access to the order server's protected API services.
 
 ##### Obtaining API Access

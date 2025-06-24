@@ -59,12 +59,12 @@ Unless you are verifying order signatures, you won't touch `BatchClaim`, all on-
 
 ### Collecting Orders
 
-Catalyst offers two ways of receiving orders:
+LI.FI intent offers two ways of receiving orders:
 
-1. **Recommended**: Connect to the Catalyst order server via WebSocket.
+1. **Recommended**: Connect to the order server via WebSocket.
 2. **Alternative**: Monitor on-chain deposits through the deposit interface.
 
-The Catalyst order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain. From either source you will receive a `StandardOrder` and other fill details to be submitted across all VMs:
+The order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain. From either source you will receive a `StandardOrder` and other fill details to be submitted across all VMs:
 
 ```solidity
 struct StandardOrder {

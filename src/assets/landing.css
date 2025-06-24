@@ -3,6 +3,7 @@
   --overlay-blurple: hsla(var(--purple-hsl), 0.2);
   --gray-rgb: 237, 238, 243;
   --gray-color: rgb(var(--gray-rgb));
+  --sl-color-backdrop-overlay: hsla(0, 0%, 98%, 0.66);
 }
 
 :root[data-theme="light"] {
@@ -55,4 +56,18 @@ div.pagination-links > a {
 
 .sl-steps > li:last-child::after {
   content: none;
+}
+
+
+site-search > dialog  {
+  background-color: hsla(0, 0%, 98%, 0.1);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: none;
+  border: 1px solid transparent;
+}
+
+site-search > dialog::backdrop {
+  background-color: transparent;
+  backdrop-filter: blur(0.1rem);
 }

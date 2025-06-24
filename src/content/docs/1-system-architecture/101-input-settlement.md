@@ -9,7 +9,7 @@ sidebar:
 Currently, one Input Settler is supported: 
 - [**InputSettlerCompact**](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol)
 
-The Compact is resource locks and thus support first-fill flows. However, Catalyst also supports escrow-like flows.
+The Compact is resource locks and thus support first-fill flows. However, LI.FI intent also supports escrow-like flows.
 
 #### Default Output
 The default output for settlement schemes is [`MandateOutput`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/MandateOutputType.sol#L4-L18):
@@ -29,7 +29,7 @@ To check if the encoded output description has been validated, the hashed encode
 
 ## InputSettlerCompact
 
-The Compact Settler uses the [`CatalystCompactOrder`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/StandardOrderType.sol#L6-L15):
+The Compact Settler uses the [`StandardOrder`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/StandardOrderType.sol#L6-L15):
 ```solidity
 struct StandardOrder {
     address user;

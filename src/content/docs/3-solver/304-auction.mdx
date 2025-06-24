@@ -1,12 +1,12 @@
 ---
 title: "Auctions"
 slug: "solver/auctions"
-description: "Catalyst supports various order types and auctions to get the best price for users. Solvers compete in these auctions through various means."
+description: "LI.FI intent supports various order types and auctions to get the best price for users. Solvers compete in these auctions through various means."
 sidebar:
   order: 4
 ---
 
-Catalyst supports three order types: Limit Order (First come, first serve / gas auction), Dutch Auction (on-chain), and off-chain auctions.
+LI.FI intent supports three order types: Limit Order (First come, first serve / gas auction), Dutch Auction (on-chain), and off-chain auctions.
 
 Each output encodes a specific order type. Generally, all outputs will be of the same order type. (This is enforced.)
 
@@ -16,7 +16,7 @@ The _auction_ happens on-chain, with the winner determined by speed.
 
 ### Limit Order (First come, First serve)
 
-Catalyst limit orders are simple: single price, first execution. That means the amount set in `OutputDescription` is final and will be what you are paying. The output can be filled once per `orderId` (the output is hashed and stored in a map with `orderId`).
+LI.FI intent limit orders are simple: single price, first execution. That means the amount set in `OutputDescription` is final and will be what you are paying. The output can be filled once per `orderId` (the output is hashed and stored in a map with `orderId`).
 
 The winner of an order is the first solver to call `fill` and set their identifier for the output.
 
@@ -24,7 +24,7 @@ You can identify Limit Orders by **both** `fillerAddress` and `fulfillmentContex
 
 ### Dutch Auction
 
-Catalyst Dutch auctions are slightly more complicated. The fulfillment context will have the slope and stopTime encoded.
+LI.FI intent Dutch auctions are slightly more complicated. The fulfillment context will have the slope and stopTime encoded.
 
 The winner of an order is the first solver to call `fill` and set their identifier as the output. Notice that the win selection is equivalent to the limit order, except the earlier the fill is called, the more the solver pays.
 
@@ -40,7 +40,7 @@ The auction happens on-chain, with the winner determined by speed and thus also 
 
 ### Off-chain Auctions
 
-Catalyst off-chain auctions allow for complex auction logic at the cost of centralization. An order can choose an off-chain entity to execute an auction on its behalf.
+Li.FI intent off-chain auctions allow for complex auction logic at the cost of centralization. An order can choose an off-chain entity to execute an auction on its behalf.
 
 That entity shall then sign and append information to the `Output`, which the winner of the auction can then redeem on-chain.
 
