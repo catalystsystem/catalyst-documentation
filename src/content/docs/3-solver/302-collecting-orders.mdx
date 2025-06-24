@@ -1,231 +1,41 @@
 ---
 title: "Collecting Orders"
 slug: "solver/orderflow"
-description: "Catalyst has two ways of emitting orders: 1. On-chain through the deposit interface or through the Catalyst order server. For ease of integration and to ensure you receive all orders, it is recommended that you connect to the Catalyst order server for events."
+description: "LI.FI intent has two ways of emitting orders: 1. On-chain through the deposit interface or through the order server. For ease of integration and to ensure you receive all orders, it is recommended that you connect to the order server for events."
 sidebar:
   order: 2
   badge:
-    text: Devnet!
-    variant: caution
+    text: Testnet!
+    variant: note
 ---
 
-:::caution[Devnet!]
-Catalyst is currently on devnet! There will be one breaking change to the order struct as we [migrate](https://github.com/catalystsystem/catalyst-intent/pull/92) to [TheCompact v1](https://github.com/Uniswap/the-compact/pull/65) and contracts will have to be redeployed twice before mainnet.
+:::note[Testnet!]
+Li.FI intent is currently on testnet! Contracts will be redeployed once before mainnet.
 :::
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 The Catalyst order server is a helpful intermediary that allows users to submit intents (orders) and broadcasts those intents to solvers. It serves as a central hub that:
 
-1. Collects user intents from various sources
-2. Broadcasts these intents to connected solvers in real-time
-3. Tracks the on-chain status of all transactions necessary for the intent to work end-to-end
+1. Collects user intents from various sources.
+2. Broadcasts these intents to connected solvers in real-time.
+3. Tracks the on-chain status of all transactions.
 
-While the order server is the recommended integration surface for most solvers due to its convenience and comprehensive order delivery, it's important to note that – _for on-chain orders_ – **it's entirely optional**. Catalyst is designed to be fully decentralized, and solvers can choose to directly monitor on-chain events for a more permissionless approach with potentially lower latency.
+:::caution[On-chain orders]
+While the order server is the recommended integration surface due to its built in security aids, it is important to note that – _for on-chain orders_ – the order server **is entirely optional**. However, not all intents are emitted on-chain and [lintent.org](https://lintent.org) does not emit intents on-chain. Intents emitted on-chain needs to be hydrated and very throughly validated.
+:::
 
 ## Order subscription
 
-Below we will go over how to collect Catalyst orders. Alternatively see the example solver here: https://github.com/catalystsystem/catalyst-example-solver/blob/main/src/handlers/vm-order.handler.ts
+There are 2 ways to collect orders. Either through a websocket subscription where orders will be pushed or via a GET endpoint. It is recommended to get orders pushed via the websocket subscription. Both methods can be found in the [lintent.org](https://lintent.org) demo [implementation](https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/api.ts#L75-L114). 
 
-The order subscription system allows solvers to receive real-time order notifications through a WebSocket connection. This subscription-based approach ensures that solvers can immediately process new orders as they enter the system, without needing to continuously poll for updates.
-
-When subscribing to orders, solvers receive structured data containing all necessary information to evaluate and potentially fulfill each order. The subscription system handles automatic reconnection in case of connection issues and provides a robust way to maintain a persistent connection to the order server.
+If you use the GET endpoint too aggressively, you may be throttled or temporarily timed out. You can find swagger documentation on api interfaces on https://order-dev.li.fi/docs.
 
 ### Order Server events
 
-Catalyst webscoket message are formatted with a event and a data field:
-```typescript
-interface CatalystEvent<T> {
-  event: CatalystWsEventType;
-  data: T;
-}
-```
-The Datafield depends on the event type::
-```typescript
-export enum WebSocketEvents {
-  /// @dev Heartbeat event.
-  PING = "ping",
-  /// @dev Intent has been submitted and is being broadcast
-  USER_ORDER_VM = "user:vm-order-submit",
-  /// @dev Intent status has been changed. This may indicate that an intent has been filled.
-  APP_ORDER_STATUS_CHANGED = "app:order-status-change",
-}
-```
+When connected to the order server, the order server will continuously send a ping messages to which the client is expected to respond with a `pong`. This is used to disconnect misbehaving clients and for debugging purposes. You can find an example [implementation here](https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/api.ts#L89-L95).
 
-When connected to the order server, the order server will continuously send a ping messages to which the client is expected to respond with a `pongs`. This is used to disconnect misbehaving clients and for debugging purposes.
-
-For order collection, the important event is `USER_ORDER_VM`. The Data will be formatted as a `CatalystOrder`:
-
-```typescript
-export interface CatalystOrder {
-  order: CompactOrder;
-  quotes: QuoteContext;
-  meta: CatalystOrderMeta;
-  sponsorSignature: string;
-  allocatorSignature: string;
-}
-
-export interface QuoteContext {
-  toAsset: string;
-  toPrice: string;
-  discount: string;
-  fromAsset: string;
-  fromPrice: string;
-  intermediary: string;
-}
-
-export interface CompactOrder {
-  type: "CompactOrder"; // Used to identify this as a compact order
-  user: string;
-  nonce: number;
-  originChainId: number;
-  fillDeadline: number;
-  localOracle: string;
-  inputs: [number, number][];
-  outputs: OutputDescription[];
-}
-
-export interface OutputDescription {
-  remoteOracle: string;
-  remoteFiller: string;
-  token: string;
-  amount: number;
-  recipient: string;
-  chainId: number;
-  remoteCall: string;
-  fulfillmentContext: string;
-}
-
-export interface CatalystOrderMeta {
-  submitTime: number;
-  orderIdentifier?: string;
-  orderStatus?: string;
-  connectedWalletId?: string;
-  destinationAddress?: string;
-  originId?: string;
-  confirmationsCount?: number;
-  requiredConfirmationsCount?: number;
-  orderInitiatedTxHash?: string;
-  orderPurchasedTxHash?: string;
-  orderProvenTxHash?: string;
-  nonVmTxHash?: string;
-
-  signedAt?: Date;
-  initiatedAt?: Date;
-  pendingTransferAt?: Date;
-  settledTransferAt?: Date;
-  purchasedAt?: Date;
-  provenAt?: Date;
-  failedAt?: Date;
-  expiredAt?: Date;
-}
-```
-
-Below you can find an example script to connect to the websocket server.
-
-```typescript
-import { WebSocket } from "ws";
-
-class WebSocketClient {
-  private ws: WebSocket;
-  private reconnectInterval = 5000; // Reconnect interval in milliseconds
-  private wsUri: string;
-
-  constructor(wsUri: string) {
-    this.wsUri = wsUri;
-    this.connect();
-  }
-
-  private connect(): void {
-    // Initialize WebSocket connection
-    this.ws = new WebSocket(this.wsUri);
-
-    // Connection opened
-    this.ws.on("open", () => {
-      console.log("Connected to WebSocket server");
-      // You can send an initial message here if needed
-      this.ws.send(
-        JSON.stringify({ type: "hello", message: "Connected to server" })
-      );
-    });
-
-    // Listen for messages
-    this.ws.on("message", async (data: RawData) => {
-      try {
-        const parsedData: CatalystEvent<unknown> = JSON.parse(data.toString());
-
-        switch (parsedData.event) {
-          case CatalystWsEventType.PING:
-            this.handleReceivePing();
-            break;
-
-          case CatalystWsEventType.VM_ORDER:
-            console.log(`[${CatalystWsEventType.VM_ORDER}]`, parsedData);
-            // add your custom filling logic in this function
-            await this.handleVmOrder(
-              parsedData as CatalystEvent<CatalystOrder>
-            );
-            break;
-
-          default:
-            console.log("Unknown message type:", parsedData);
-        }
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-      }
-    });
-
-    // Handle errors
-    this.ws.on("error", (error) => {
-      console.error("WebSocket error:", error);
-    });
-
-    // Handle disconnection
-    this.ws.on("close", () => {
-      console.log("Disconnected from WebSocket server");
-      this.reconnect();
-    });
-  }
-
-  private reconnect(): void {
-    console.log(
-      `Attempting to reconnect in ${this.reconnectInterval / 1000} seconds...`
-    );
-    setTimeout(() => {
-      this.connect();
-    }, this.reconnectInterval);
-  }
-
-  public sendMessage(message: any): void {
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    } else {
-      console.warn("WebSocket is not open. Cannot send message.");
-    }
-  }
-
-  private sendPong(): void {
-    this.sendMessage({ type: "pong" });
-  }
-
-  public close(): void {
-    this.ws.close();
-  }
-}
-
-// Usage example
-const wsUri = "order-server-uri";
-
-// Create WebSocket client
-const client = new WebSocketClient(wsUri);
-
-// Keep the process running
-process.on("SIGINT", () => {
-  console.log("Closing WebSocket connection...");
-  client.close();
-  process.exit(0);
-});
-```
+For order collection, the important event is `user:vm-order-submit`. The Data will be returned similarly to it was [submitted](https://order-dev.li.fi/docs#:~:text=SubmitOrderDto).
 
 ## Order Validation
 
@@ -275,39 +85,35 @@ Tokens inputs are provided as uint256. This is a standard format for resource lo
 
 ### Signature Validation
 
-The `CatalystCompactOrder` will be used to interface all functions on the input chain. Additionally, once hydrated with a signature, it allows one to verify the validity of an order.
+The `StandardOrder` will be used to interface all functions on the input chain. Additionally, once hydrated with a signature, it allows one to verify the validity of an order.
 
-The `CatalystCompactOrder` struct will be signed and stored as a witness in the appropriate lock/claim structure. For TheCompact, this is:
+The `StandardOrder` struct will be signed and stored as a witness in the appropriate lock/claim structure. For TheCompact, this is:
 
 ```solidity
 struct BatchCompact {
     address arbiter; // Associated settlement contract
-    address sponsor; // CatalystCompactOrder.user
-    uint256 nonce; // CatalystCompactOrder.nonce
-    uint256 expires; // CatalystCompactOrder.fillDeadline
-    uint256[2][] idsAndAmounts; // CatalystCompactOrder.inputs
-    CatalystWitness witness;
+    address sponsor; // StandardOrder.user
+    uint256 nonce; // StandardOrder.nonce
+    uint256 expires; // StandardOrder.expires
+    uint256[2][] idsAndAmounts; // StandardOrder.inputs
+    Mandate mandate;
 }
 
-struct CatalystWitness {
-    uint32 fillDeadline; // CatalystCompactOrder.fillDeadline
-    address localOracle; // CatalystCompactOrder.localOracle
-    OutputDescription[] outputs; // CatalystCompactOrder.outputs
+struct Mandate {
+    uint32 fillDeadline; // StandardOrder.fillDeadline
+    address localOracle; // StandardOrder.localOracle
+    OutputDescription[] outputs; // StandardOrder.outputs
 }
 ```
 
 To validate an order, ensure that the sponsor and allocator signatures are valid for this EIP-712 signed structure.
 
-
 #### On-chain Order Broadcast
 
-Output settlement schemes supporting on-chain orders like [`CompactSettlerWithDeposit.sol`](/architecture/input/#with-deposit) or the [LI.FI facet](https://github.com/reednaa/lifi-contracts/blob/catalyst/src/Facets/CatalystFacet.sol) allow anyone to broadcast and collect orders on-chain through either `Deposited` event:
+When intents are registered on-chain, they can be broadcasted on the Input Settlement contract through the [`IntentRegistered`](https://github.com/catalystsystem/catalyst-intent/blob/27ce0972c150ed113f66ae91069eb953f23d920b/src/input/compact/InputSettlerCompactLIFI.sol#L67) event:
 
 ```solidity
-/// @dev LI.FI facet since it does not have access to the orderId.
-event Deposited(CatalystCompactOrder order);
-/// @dev Catalyst Settler since it does has access to the orderId.
-event Deposited(bytes32 indexed orderId, CatalystCompactOrder order);
+event IntentRegistered(bytes32 indexed orderId, StandardOrder order);
 ```
 
 :::caution

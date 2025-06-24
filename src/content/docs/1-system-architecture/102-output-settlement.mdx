@@ -6,22 +6,22 @@ sidebar:
   order: 2
 ---
 
-Catalyst's initial filler – [`CoinFiller.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/fillers/coin/CoinFiller.sol) – supports two order types: simple limit orders and Dutch auctions. For more about the specific order details, see the section on [Auctions](/solver/auctions)
+Currently only one output settler exists: – [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol) – supporting four order types: simple limit orders, Dutch auctions, exclusive limit orders, and exclusive dutch auctions.. For more about the specific order details, see the section on [Auctions](/solver/auctions)
 
 ## CoinFiller
 
-To configure whether to use a limit order or a Dutch auction, set the associated `fulfillmentContext` on the `OutputDescription`.
+To configure which auction type used set the associated `output.context`.
 
 import { Code } from '@astrojs/starlight/components';
 
-export const outputDescription = `
-struct OutputDescription {
+export const mandateOutput = `
+struct MandateOutput {
     ...
-    bytes remoteCall;
-    bytes fulfillmentContext;
+    bytes call;
+    bytes context;
 }`;
 
-<Code code={outputDescription} lang="solidity" mark={['bytes fulfillmentContext;']} />
+<Code code={mandateOutput} lang="solidity" mark={['bytes context;']} />
 
 Use the following pseudocode:
 

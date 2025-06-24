@@ -1,35 +1,40 @@
 ---
-title: "Overview"
+title: "System Overview"
 slug: "architecture/overview"
-description: "Overview of the Catalyst full-stack intents system"
+description: "Overview of the LI.FI intent intents system. The system consists of 3 modular components (Input Settler, Output Settler, and validation network) that can be selected based on the desired intent structure."
 sidebar:
   order: 0
 ---
 
+
+import { Image } from 'astro:assets';
+import intentFlow from '../../../assets/intent-flow.svg';
+
 Catalyst modularizes three components of the cross-chain intent flow:
 
-1. **Input settlement scheme** – Handles the source chain funds
+1. **Input settlement scheme**  – Handles the source chain funds
 2. **Output settlement scheme** – Handles the destination chain funds
-3. **Validation layer** – Connects the input and output settlement
+3. **Oracle System**            – Make Output Settlement statements available for the input settler.
 
-Historically, these components have been intertwined, presenting issues with scaling. Catalyst's componentized approach allows for greater flexibility and extensibility, allowing for different input and output settlement schemes and validation layers to be matched. This allows Catalyst to support varying degrees of asset technologies: fill first, user as solver, and ordinary swaps.
+<Image src={intentFlow} height="400" alt="Overview of the intent process"/>
+
+Historically, these components have been intertwined, presenting issues with scaling. A componentized approach allows for greater flexibility and extensibility, allowing for different input and output settlement schemes and validation layers to be matched.
 
 ### Input Settlement
 
 The input settlement scheme is responsible for managing user deposits and releasing funds to solvers once intents are fulfilled. Catalyst currently implements two input settlement schemes:
 
-- [**TheCompact**](https://github.com/Uniswap/the-compact) through [`CompactSettlerWithDeposit.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/settlers/compact/CompactSettlerWithDeposit.sol)
-- [**Rhinestone**](https://www.rhinestone.wtf) through [`CompactSettler.sol`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/settlers/compact/CompactSettler.sol)
+- [**TheCompact**](https://github.com/Uniswap/the-compact) through [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/input/compact/InputSettlerCompact.sol)
 
 Both are resource locks supporting fill-first flows, though Catalyst also supports ordinary flows.
 
-Catalyst imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through validation layers by either calling [`isProven` or `efficientRequireProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification shall be the canonical solver.
+The intent system imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through validation layers by either calling [`efficientRequireProven`](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IOracle.sol#L19-L27). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification shall be the canonical solver.
 
 [Learn more about Input Settlement →](/architecture/input)
 
 ### Output Settlement
 
-The output settlement scheme handles the delivery of assets on destination chains. The output settlement scheme imposes no interface requirements, order structure, or order type except that an [interface to validate payloads](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IPayloadCreator.sol) is provided:
+The output settlement scheme handles the delivery of assets on destination chains. The output settlement scheme imposes no interface requirements, order structure, or order type except that an [interface to validate payloads](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IPayloadCreator.sol) is provided:
 ```solidity
 interface IPayloadCreator {
     function arePayloadsValid(
@@ -39,23 +44,23 @@ interface IPayloadCreator {
 ```
 This allows the output settlement scheme to be incredibly flexible; it can support any order type on any virtual machine, as long as the filled order can be expressed as an opaque bytes array.
 
-For simplicity, let's assume that an output can be expressed as `[token, amount, destination]`. If this output has been filled, then a valid payload could be `bytes(solver | token | amount | destination)`.
+The initial version of the intent system uses `MandateOutput` with the encoding described by [`MandateOutputEncodingLib.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/libs/MandateOutputEncodingLib.sol).
 
 If the input settlement could validate this call, the inputs could be appropriately paid to the solver. However, this information only exists on the output settlement on the output chain.
 
 [Learn more about Output Settlement →](/architecture/output)
 
-### Validation Layers
+### Oracle System
 
-The validation layer ferries valid payloads from the output chain to the input chain. It serves as the bridge that confirms fulfillment has occurred.
+The oracle system ferries valid payloads from the output chain to the input chain. It serves as the bridge that confirms output delivery has occurred.
 
-Any validation layer can be added to Catalyst as long as it supports validating a payload from a remote chain. Currently implemented validation layers include:
+Any validation layer can be added as long as it supports validating a payload from a remote chain. Currently available validation layers include:
 
-- [**Wormhole**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/wormhole/WormholeOracle.sol) (sponsored by LI.FI)
-- [**Polymer**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/polymer/PolymerOracle.sol) (sponsored by Polymer)
-- [**Bitcoin**](https://github.com/catalystsystem/catalyst-intent/blob/main/src/oracles/bitcoin/BitcoinOracle.sol) (self-serve)
+- [**Polymer**](https://github.com/openintentsframework/oif-contracts/blob/main/src/oracles/polymer/PolymerOracleMapped.sol)
+- [**Wormhole**](https://github.com/openintentsframework/oif-contracts/blob/main/src/oracles/wormhole/WormholeOracle.sol)
+- [**Bitcoin**](https://github.com/openintentsframework/oif-contracts/blob/main/src/oracles/bitcoin/BitcoinOracle.sol)
 
-It's expected that before making messages, the validation layer checks if one or more payloads are valid and then ships them to the input chain:
+It's expected that before emitting messages, the oracle checks if one or more payloads are valid and then ships them to the input chain:
 ```solidity
 function submit(address proofSource, bytes[] calldata payloads) external payable {
 	// Check if the payloads are valid.
@@ -65,23 +70,14 @@ function submit(address proofSource, bytes[] calldata payloads) external payable
 	_submit(proofSource, payloads);
 }
 ```
-How validation layers pass the information to the input chain is not scoped. They may use custom message encodings, custom relaying properties, custom interfaces, or other special integration concerns.
+Oracles may use custom message encodings, custom relaying properties, custom interfaces, or other special integration concerns. Internal oracle messaging is not standardized.
 
-On the input chain, it is expected that the validation layer validates the payload(s) through a virtual machine local hash:
+On the input chain, it is expected that the oracle system validates the payload(s) through a virtual machine local hash:
 ```solidity
 interface IValidationLayer {
     /**
-     * @notice Check if some data has been attested to.
-     * @param remoteChainId Chain the data supposedly originated from.
-     * @param remoteOracle Identifier for the remote attestation.
-     * @param remoteApplication Identifier for the application that the attestation originated from.
-     * @param dataHash Hash of data.
-     */
-    function isProven(uint256 remoteChainId, bytes32 remoteOracle, bytes32 remoteApplication, bytes32 dataHash) external view returns (bool);
-
-    /**
      * @notice Check if a series of data has been attested to.
-     * @dev More efficient implementation of isProven. Does not return a boolean, instead reverts if false.
+     * @dev Does not return a boolean, instead reverts if false.
      * This function returns true if proofSeries is empty.
      * @param proofSeries remoteOracle, remoteChainId, and dataHash encoded in chunks of 32*4=128 bytes.
      */
@@ -91,35 +87,35 @@ interface IValidationLayer {
 }
 ```
 
-Using only the payload hash makes the system more efficient as less data is passed around.
+Using only the payload hash makes the system more efficient as less data is passed around. No attempt is made at standardizing the payload. As a result, there may be [incompatibilities](/architecture/overview#standardized-message-format) between the input and output settlement layers.
 
-No attempt is made at standardizing the payload. As a result, there may be [incompatibilities](/architecture/overview#standardized-message-format) between the input and output settlement layers.
-
-[Learn more about Validation Layers →](/architecture/validation)
+[Learn more about Validation Layers →](/architecture/oracle)
 
 
 ## Security Assumptions
 
-The Catalyst system includes resource locks which create trust boundaries between key actors:
+The intent system includes resource locks which create trust boundaries between key actors:
 
 - **[Sponsors](/glossary#sponsor)** (users) trust that arbiters won't fraudulently finalize issued locks.
 - **[Arbiters](/glossary#arbiter)** and **[solvers](/glossary#solver)** trust allocators not to co-sign overlapping locks exceeding user deposits.
 
 No single actor can independently access funds, creating a secure environment for cross-chain transactions.
 
+For more about security and intent validation, [see order-validation →](/solver/orderflow/#order-validation)
+
 ## Integration Points
 
-Catalyst is designed to be highly composable with different components capable of being swapped out as needed:
+LI.FI intent is designed to be highly composable with different components capable of being swapped out as needed:
 
 - **Input Settlement**: New resource lock standards and standard intent interfaces can be integrated.
 - **Output Settlement**: New order types and fulfillment mechanisms can be added.
-- **Validation Layer**: Different cross-chain messaging protocols and proof layers can be supported.
+- **Oracle System**: Different cross-chain messaging protocols and proof layers can be supported.
 
 [Integrators](/glossary#integrator) can freely pick and choose which components to use for which swaps. This gives intent issuers maximum flexibility to describe their desired endstate.
 
 ## Unsolved Issues
 
-While the initial version of the Catalyst System is a step function improvement over competing solution at standardizing the intent stack, there are still interopability issues within the standard. For transparency, known specification issues have been listed below.
+While the initial version is a step function improvement over competing solution at standardizing the intent stack, there are still interopability issues within the standard. For transparency, known specification issues have been listed below.
 
 ### Standardized Message Format
 Currently, the input settlement scheme and the output settlement scheme has to agree on an order-type specific payload. If a new order type or settlement system requires more functionality beyond the implemented message payload, it requires deploying these components over. This break composability between these layers.
@@ -166,4 +162,4 @@ As interfaces and validation layers are not standardized, each new order type, v
 
 The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have an on-chain storage. This increases the gas cost. Ideally the specification should define a way for 1 proof to validate multiple _orders_, not just outputs.
 
-This would likely involve  [`isProven`](https://github.com/catalystsystem/catalyst-intent/blob/main/src/interfaces/IOracle.sol) using merkle trees or similar constructions to pass validated messages
+This would likely involve using merkle trees or similar constructions to pass validated messages

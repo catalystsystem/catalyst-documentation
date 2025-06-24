@@ -1,7 +1,7 @@
 ---
-title: "Solving on Catalyst"
+title: "Solving LI.FI Intents"
 slug: "solver/intro"
-description: "All Catalyst orders can be solved permissionlessly. This page introduces you to solving for Catalyst."
+description: "All LI.FI intent orders can be solved permissionlessly. This page gives an introduction of how to solve intents."
 sidebar:
   order: 0
 ---
@@ -12,37 +12,35 @@ As a solver in the cross-chain ecosystem, you're likely focused on:
 - Minimizing user escrow unlock times to reduce inventory requirements
 - Having flexibility in your liquidity sources
 
-### How Catalyst Helps
+### How LI.FI Intent Helps
 
 - **Direct access to [LI.FI](http://li.fi/)'s significant order flow**
 - **Freedom to use any liquidity source** for solving (e.g., DEXs, CEXs, or your own inventory)
-- **Fast user escrow unlock times** (typically within 30 minutes)
+- **Fast user escrow unlock times** (typically less than 2 minutes)
 - **Lower capital requirements** due to quick repayment cycles
 
-## Solving Catalyst
+## Solving Intents
 
-Catalyst is an entirely permissionless system. Since the system is componentized and components have no inherent trust elements with other components, they can be mixed and matched as desired by users. As a result, it is important that you validate orders in their entirety once received.
-
-The general Catalyst flow is as follows:
+LI.FI intent is an entirely permissionless system. Since the system is componentized and components have no inherent trust elements with other components, they can be mixed and matched as desired by users. As a result, it is important that you validate orders in their entirety once received. The general flow is:
 
 import { Steps } from '@astrojs/starlight/components';
 
 <Steps>
 
-1. The sponsor signs a Catalyst-compatible lock and sends it to the Catalyst order server.
+1. The sponsor signs the LI.FI intent-compatible lock and sends it to the LI.FI order server.
 
-2. The Catalyst order server preliminarily validates the order and obtains the allocator co-signature for the order. It is then broadcasted to solvers.
+2. The LI.FI order server preliminarily validates the order and obtains the allocator co-signature for the order. It is then broadcasted to solvers.
 
-3. A solver submits the order's output to the output settlement contract, starting the verification layer.
+3. A solver submits the order's output to the output settlement contract, starting the oracle system.
 
     :::note[[Output Settlement](/architecture/output)]
-    The output settlement is denoted as the `remoteFiller` in the order struct.
+    is denoted as the `output.settler`.
     :::
 
 4. The proof is delivered to the input chain through the validation layer.
 
-    :::note[[Validation Layer](/architecture/validation)]
-    The validation layer is denoted as the `localOracle` and `remoteOracle` in the order struct.
+    :::note[[Oracle system](/architecture/oracle)]
+    is denoted as the `localOracle` and `output.oracle` in the order struct.
     :::
 
 5. The solver submits the order to the input settlement contract, verifying the delivery and unlocking the associated input tokens.
@@ -50,62 +48,96 @@ import { Steps } from '@astrojs/starlight/components';
 </Steps>
 
 
+### Order Types
+
+LI.FI uses 3 order structures, listed from least verbose to most verbose:
+1. `BatchClaim`: Signed intent that allows for claiming input assets.
+2. `StandardOrder`: Definiton of the on-chain containing enough information to conveny the intent.
+3. Order Server response: Hydrated order with additional information that may be helpful to solvers.
+
+Unless you are verifying order signatures, you won't touch `BatchClaim`, all on-chain interactions work with `StandardOrder` to standardize interfaces. However `StandardOrder` does not contain enough information to fill intents. As a result, it is hydrated off-chain with `InputSolver`, `signatures`, and more.
+
 ### Collecting Orders
 
-The Catalyst system supports the `CatalystCompactOrder` structure across all VMs:
+Catalyst offers two ways of receiving orders:
+
+1. **Recommended**: Connect to the Catalyst order server via WebSocket.
+2. **Alternative**: Monitor on-chain deposits through the deposit interface.
+
+The Catalyst order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain. From either source you will receive a `StandardOrder` and other fill details to be submitted across all VMs:
 
 ```solidity
-struct CatalystCompactOrder {
+struct StandardOrder {
     address user;
     uint256 nonce;
     uint256 originChainId;
+    uint32 expires;
     uint32 fillDeadline;
     address localOracle;
     uint256[2][] inputs;
-    OutputDescription[] outputs;
+    MandateOutput[] outputs;
 }
 ```
 
-Where `uint256[2][] inputs === [uint256 tokenId, uint256 amount][]` and `OutputDescription`:
+Where `uint256[2][] inputs === [uint256 tokenId, uint256 amount][]` and `MandateOutput`:
 
 ```solidity
-struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
+struct MandateOutput {
+    bytes32 oracle;
+    bytes32 settler;
     uint256 chainId;
     bytes32 token;
     uint256 amount;
     bytes32 recipient;
-    bytes remoteCall;
-    bytes fulfillmentContext;
+    bytes call;
+    bytes context;
 }
 ```
 
-The `CatalystCompactOrder` will be used to interface all functions on the input chain. Additionally, once hydrated with a signature, it allows one to verify the validity of an order.
+For more information on collecting orders [View Order Collection Guide →](/solver/orderflow)
 
-Catalyst offers two ways of receiving orders:
+## Filling Intents
 
-1. **Recommended**: Connect to the Catalyst order server via WebSocket
-2. **Alternative**: Monitor on-chain deposits through the deposit interface
+To fill intents, the execution of all `MandateOutput`s has to be done; Each `MandateOutput` is a self contained execution description.
+- `output.settler` defines the execution with its associated context and should be called on its interface. Currently, only one OutputSettler is implemented: [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol) which have 2 interfaces for filling:
 
-The Catalyst order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain.
+```solidity
+/// @notice For implementing own batching functionality
+function fill(
+    uint32 fillDeadline,
+    bytes32 orderId,
+    MandateOutput calldata output,
+    bytes32 proposedSolver
+) external returns (bytes32 actualSolver);
 
-[View Order Collection Guide →](/solver/orderflow)
+/// @notice For batch filling entire orders.
+function fillOrderOutputs(
+    uint32 fillDeadline,
+    bytes32 orderId,
+    MandateOutput[] calldata outputs,
+    bytes32 proposedSolver
+) external;
+```
 
-## Filling EVM Orders
+For more information about filling intents [View EVM Order Filling Guide →](/solver/evm)
 
-To fill Catalyst orders, you must support the Output Settlement interfaces. Each Output Settlement interface is different, but most support the generic `OutputDescription` types.
+## Validating Fills
 
-The delivery of assets depends on the Output Settlement Interface associated with an order. The Output Settlement Interface can be read from the order: `orderDto.order.remoteFiller`.
-
-[View EVM Order Filling Guide →](/solver/evm)
+After filling intents, the proof of fill has to be sent to the input chain. The oracle system used for the order is specified through `localOracle` and `output.oracle`. These should match. However, validating filled outputs is highly oracle specific. For more, [View Oracle System Architecture ->](/architecture/oracle/#implemented-validation-interfaces) ->
 
 ## Settling Orders
 
-Settling Catalyst orders may require up to two transactions:
-1. Submission of self-serve message validation
-2. Finalizing the order on the resource lock
+Lastly, intents have to be settled before their expiry. This is achieved by calling `finalise[withSignature]` on the designated InputSettler. The caller has to be the designated solver set on fill.
 
-If the validation layer is not self-serve or is being sponsored, only one transaction is needed.
+```solidity
+function finalise(
+    StandardOrder calldata order,
+    bytes calldata signatures,
+    uint32[] calldata timestamps,
+    bytes32[] memory solvers,
+    bytes32 destination,
+    bytes calldata call
+) external;
+```
 
-[View Order Settlement Guide →](/solver/settlement)
+For more information about settling orders [View Order Settlement Guide →](/solver/settlement)

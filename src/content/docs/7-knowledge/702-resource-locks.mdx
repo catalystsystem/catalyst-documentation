@@ -28,17 +28,15 @@ import { Steps } from '@astrojs/starlight/components';
 
 <Card>
   <Steps>
+    0. The **sponsor** makes a deposit into a resource lock, if one does not already exist.
 
-  0. The **sponsor** makes a deposit into a resource lock, if one does not already exist.
+    1. The **sponsor** signs a lock that describes a desired outcome.
 
-  1. The **sponsor** signs a lock that describes a desired outcome.
+    2. The **allocator** ensures that the appropriate funds exist for the lock to be valid. In other words, if the sponsor has deposited 10 tokens, no set of approved locks shall exceed 10 tokens. The allocator then co-signs the lock.
 
-  2. The **allocator** ensures that the appropriate funds exist for the lock to be valid. In other words, if the sponsor has deposited 10 tokens, no set of approved locks shall exceed 10 tokens. The allocator then co-signs the lock.
+    3. The desired event takes place.
 
-  3. The desired event takes place.
-
-  4. The **arbiter** validates that the event has taken place and releases the token to the appropriate recipient.
-
+    4. The **arbiter** validates that the event has taken place and releases the token to the appropriate recipient.
   </Steps>
 </Card>
 
