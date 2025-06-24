@@ -1,16 +1,16 @@
 ---
 title: "Output Settlement"
 slug: "architecture/output"
-description: "LI.FI intent currently supports two order types: simple limit orders and Dutch auctions. However, the LI.FI intent was designed with flexibility in mind, and more can easily be added."
+description: "LI.FI intent enables on-chain competition and flexible order types, letting solvers optimize settlement and capture cross-chain opportunities."
 sidebar:
   order: 2
 ---
 
-Currently only one output settler exists: – [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol) – supporting four order types: simple limit orders, Dutch auctions, exclusive limit orders, and exclusive dutch auctions. For more about the specific order details, see the section on [Auctions](/solver/auctions)
+Currently, only one output settler exists: – [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol) – which supports four order types: simple limit orders, Dutch auctions, exclusive limit orders, and exclusive Dutch auctions. For more details about specific order types, see the section on [Auctions](/solver/auctions).
 
 ## CoinFiller
 
-To configure which auction type used set the associated `output.context`.
+To configure which auction type is used, set the associated `output.context`.
 
 import { Code } from '@astrojs/starlight/components';
 
@@ -34,4 +34,4 @@ if (orderType == "limit") fulfillmentContext = "0x" || fulfillmentContext = "0x0
 if (orderType == "dutch") fulfillmentContext = abi.encodePacked(0x01, slope, stopTime);
 ```
 
-Specifically for Dutch auctions, if the order contains multiple outputs, only the first one will work as an auction, and the rest will resolve to the worst price. This is because solvers are only incentivized to compete on the first output in an order, since the winner of that order is the winner of the entire order once anyone fills the rest of the outputs.
+Specifically for Dutch auctions, if the order contains multiple outputs, only the first one will function as an auction. The rest will resolve to the worst price. This is because solvers are only incentivized to compete on the first output in an order, since the winner of that output is the winner of the entire order once anyone fills the remaining outputs.

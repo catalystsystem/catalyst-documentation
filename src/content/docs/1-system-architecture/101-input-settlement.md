@@ -1,15 +1,15 @@
 ---
 title: "Input Settlement"
 slug: "architecture/input"
-description: "Built with resource locks in mind, LI.FI intents supports a variety of input settlement schemes. TheCompact and Rhinestone both allow for first-fill flows and sponsored transactions, assuming the user has existing deposits."
+description: "Built with resource locks in mind, LI.FI intents support a variety of input settlement schemes. The Compact and Rhinestone both allow for first-fill flows and sponsored transactions, assuming the user has existing deposits."
 sidebar:
   order: 1
 ---
 
-Currently, one Input Settler is supported: 
+Currently, only one Input Settler is supported:
 - [**InputSettlerCompact**](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol)
 
-The Compact is resource locks and thus support first-fill flows. However, LI.FI intent also supports escrow-like flows.
+The Compact uses resource locks and supports first-fill flows. However, LI.FI intents also support escrow-like flows.
 
 #### Default Output
 The default output for settlement schemes is [`MandateOutput`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/MandateOutputType.sol#L4-L18):
@@ -25,7 +25,7 @@ struct MandateOutput {
     bytes context;
 }
 ```
-To check if the encoded output description has been validated, the hashed encoded payload should be sent to the appropriate local oracle along with relevant resolution details, such as who the solver was.
+To verify if the encoded output description has been validated, send the hashed encoded payload to the appropriate local oracle along with relevant resolution details, such as the solver's identity.
 
 ## InputSettlerCompact
 
@@ -43,15 +43,15 @@ struct StandardOrder {
 }
 ```
 
-The CompactSettler supports two ways to resolve locks once the outputs have been made available for verification by the validation layer:
+The CompactSettler supports two ways to resolve locks once outputs are available for verification by the validation layer:
 
-The two ways to finalize an intent:
-1. [`finalise`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L177-L184): Can only be called by the solver. The caller can designate where to send assets and whether an external call should be made.
-2. [`finaliseWithSignature`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L213-L221): Can be called by anyone with an [`AllowOpen`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/AllowOpenType.sol#L5-L9l) signature from the solver containing the destination and call.
+There are two ways to finalize an intent:
+1. [`finalise`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L177-L184): Can only be called by the solver. The caller can designate where to send assets and whether to make an external call.
+2. [`finaliseWithSignature`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L213-L221): Can be called by anyone with an [`AllowOpen`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/AllowOpenType.sol#L5-L9l) signature from the solver, containing the destination and call details.
 
 ### Intent Registration
 
-While intents are transferred in the structure of `StandardOrder` they are signed as a `BatchClaim` with the following structure:
+While intents are transferred as `StandardOrder` structures, they are signed as a `BatchClaim` with the following structure:
 
 ```solidity
 struct BatchCompact {
@@ -60,10 +60,10 @@ struct BatchCompact {
     uint256 nonce;
     uint256 expires;
     uint256[2][] idsAndAmounts;
-    Mandate mandate
+    Mandate mandate;
 }
 ```
-With the Mandate being:
+With the Mandate defined as:
 ```solidity
 struct Mandate {
     uint32 fillDeadline;
@@ -72,14 +72,12 @@ struct Mandate {
 }
 ```
 
-Intents are EIP712 signed `BatchClaim`s with The Compact's domain separator.
+Intents are EIP712-signed `BatchClaim`s using The Compact's domain separator.
 
-An alternative to signing the intent, is registering it on-chain. There are 2 ways to achieve this. Either by registering it by the sponsor (user) or paying for the entire claim and registering it on their behalf.
+Alternatively, intents can be registered on-chain. There are two ways to do this: either the sponsor (user) registers it, or someone pays for the entire claim and registers it on their behalf.
 
-#### Integration examples:
+#### Integration Examples
 
-For a smart contract implementation of how to register intents on behalf of someone else, see `RegisterIntentLib.sol`: https://github.com/catalystsystem/catalyst-intent/blob/27ce0972c150ed113f66ae91069eb953f23d920b/src/libs/RegisterIntentLib.sol#L100-L131
-
-For a UI implementation of how to sign the Batch Compact, refer to the lintent.org demo: https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/lifiintent/tx.ts#L144
-
-For a UI implementation of how to deposit and register the intent, refer to the lintent.org demo: https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/lifiintent/tx.ts#L199
+- For a smart contract example of registering intents on behalf of someone else, see [`RegisterIntentLib.sol`](https://github.com/catalystsystem/catalyst-intent/blob/27ce0972c150ed113f66ae91069eb953f23d920b/src/libs/RegisterIntentLib.sol#L100-L131).
+- For a UI example of signing the Batch Compact, refer to the [lintent.org demo](https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/lifiintent/tx.ts#L144).
+- For a UI example of depositing and registering the intent, see the [lintent.org demo](https://github.com/catalystsystem/lintent/blob/a4aa78cd058cade732b73d83aa2843dd4e9ea24d/src/lib/utils/lifiintent/tx.ts#L199).

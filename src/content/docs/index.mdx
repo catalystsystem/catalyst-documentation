@@ -1,6 +1,6 @@
 ---
 title: LI.FI Intents
-description: LI.FI Intents standardizes the 3 components to an intent, the input context, the output context, and the verification layer. This allows LI.FI intent to be efficient, flexible, and extensive.
+description: "LI.FI intent standardizes cross-chain workflows—enabling efficient, composable integration for engineers through unified intent expression, settlement, and verification."
 hero:
   tagline: The Full-stack Open Intent Framework
   image:
@@ -8,13 +8,13 @@ hero:
     dark: "/src/assets/symbol_light.svg"
 ---
 
-**LI.FI intents is an intent marketplace where solvers compete to fulfil users' token transfers across different blockchains.** Built specifically for wallets and applications using resource locks, LI.FI helps deliver better prices and faster settlement times for cross-chain transactions.
+**LI.FI intents is an intent marketplace where solvers compete to fulfill users' token transfers across different blockchains.** Built specifically for wallets and applications using resource locks, LI.FI helps deliver better prices and faster settlement times for cross-chain transactions.
 
 ## What is an Intent Protocol?
 
-An intent protocol allows users to express what they want to accomplish (e.g., "transfer 100 USDC from Ethereum to Polygon") without specifying exactly how it should happen. The protocol then finds the best way to fulfil this intent through a competitive marketplace of solvers.
+An intent protocol allows users to express what they want to accomplish (e.g., "transfer 100 USDC from Ethereum to Polygon") without specifying exactly how it should happen. The protocol then finds the best way to fulfill this intent through a competitive marketplace of solvers.
 
-**Solvers** are specialised third-parties who fulfil cross-chain intents using their own capital and liquidity sources. They compete with each other to offer users the best prices for moving assets between blockchains.
+**Solvers** are specialized third parties who fulfill cross-chain intents using their own capital and liquidity sources. They compete to offer users the best prices for moving assets between blockchains.
 
 ```d2
 style.fill: transparent
@@ -51,37 +51,32 @@ Output Chain: {
 
 Think of OIF like Uber for cross-chain transfers: Users request a service (moving tokens across chains), and qualified providers (solvers) compete to offer the best price and service.
 
-
 ## What are Resource Locks?
 
 Resource locks are smart contracts that securely hold user funds until specific conditions are met. They act as escrow accounts, ensuring that users' assets remain safe until their cross-chain transaction is properly executed.
 
-You can find more information on resource locks in the [knowledge database](/knowledge/resource-locks).
+You can find more information about resource locks in the [knowledge database](/knowledge/resource-locks).
 
 ## How It Works
 
 import { Steps } from '@astrojs/starlight/components';
 
 <Steps>
-  1. **User expresses an intent**: A user deposits their tokens using a resource lock standard (like The Compact).
-
-  2. **Intent is distributed to the marketplace**: The lock generates a proof of deposit that is broadcasted to the order server.
-
-  3. **Solvers bid and compete for intents**: Our network of solvers analyses the intent and submits competitive quotes.
-
+  1. **User expresses an intent**: The user deposits their tokens using a resource lock standard (such as The Compact).
+  2. **Intent is distributed to the marketplace**: The lock generates a proof of deposit, which is broadcast to the order server.
+  3. **Solvers bid and compete for intents**: Our network of solvers analyzes the intent and submits competitive quotes.
   4. **Intent execution**: The winning solver delivers the requested assets on the destination chain.
-
   5. **Verification & settlement**: The delivery is verified, and the locked funds are released to the solver.
 </Steps>
 
 ## Concepts & Actors in the OIF System
 
-- [**Intents**](/glossary#intent)**:** User requests that express what they want to accomplish without specifying exactly how it should happen.
-- [**Solvers**](/glossary#solver)**:** Entities who compete to fill orders
-- [**Resource Locks**](/glossary#resource-lock)**:** Smart contracts that securely escrow and unlock user funds
-- [**Order Server**](/glossary#order-server)**:** Marketplace where intents are matched with solvers
-- [**Output Settler**](/glossary#output-settler)**:** Records asset delivery on destination chain
-- [**Oracle**](/glossary#oracle)**:** Transmits proof of delivery back to source chain
-- [**Input Settler**](/glossary#input-settler)**:** Verifies proofs and releases locked funds to solvers
+- [**Intents**](/glossary#intent): User requests that express what they want to accomplish without specifying exactly how it should happen.
+- [**Solvers**](/glossary#solver): Entities who compete to fill orders.
+- [**Resource Locks**](/glossary#resource-lock): Smart contracts that securely escrow and unlock user funds.
+- [**Order Server**](/glossary#order-server): The marketplace where intents are matched with solvers.
+- [**Output Settler**](/glossary#output-settler): Records asset delivery on the destination chain.
+- [**Oracle**](/glossary#oracle): Transmits proof of delivery back to the source chain.
+- [**Input Settler**](/glossary#input-settler): Verifies proofs and releases locked funds to solvers.
 
 You can find more definitions in the [glossary](/glossary).

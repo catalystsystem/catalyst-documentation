@@ -1,40 +1,40 @@
 ---
 title: "System Overview"
 slug: "architecture/overview"
-description: "Overview of the LI.FI intent intents system. The system consists of 3 modular components (Input Settler, Output Settler, and validation network) that can be selected based on the desired intent structure."
+description: "Overview of the LI.FI intent system. The system consists of three modular components (Input Settler, Output Settler, and validation network) that can be selected based on the desired intent structure."
 sidebar:
   order: 0
 ---
-
 
 import { Image } from 'astro:assets';
 import intentFlow from '../../../assets/intent-flow.svg';
 
 LI.FI intent modularizes three components of the cross-chain intent flow:
 
-1. **Input settlement scheme**  – Handles the source chain funds
-2. **Output settlement scheme** – Handles the destination chain funds
-3. **Oracle System**            – Make Output Settlement statements available for the input settler.
+1. **Input settlement scheme** – Handles the source chain funds.
+2. **Output settlement scheme** – Handles the destination chain funds.
+3. **Oracle System** – Makes Output Settlement statements available for the input settler.
 
 <Image src={intentFlow} height="400" alt="Overview of the intent process"/>
 
-Historically, these components have been intertwined, presenting issues with scaling. A componentized approach allows for greater flexibility and extensibility, allowing for different input and output settlement schemes and validation layers to be matched.
+Historically, these components have been intertwined, which presented scaling challenges. A componentized approach allows for greater flexibility and extensibility, enabling different input and output settlement schemes and validation layers to be mixed and matched.
 
 ### Input Settlement
 
-The input settlement scheme is responsible for managing user deposits and releasing funds to solvers once intents are fulfilled. LI.FI intent currently implements one input settlement schemes:
+The input settlement scheme manages user deposits and releases funds to solvers once intents are fulfilled. LI.FI intent currently implements one input settlement scheme:
 
-- [**TheCompact**](https://github.com/Uniswap/the-compact) through [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/input/compact/InputSettlerCompact.sol)
+- [**TheCompact**](https://github.com/Uniswap/the-compact) via [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/input/compact/InputSettlerCompact.sol)
 
-Resource locks supports both fill-first flows and ordinary flows.
+Resource locks support both fill-first flows and ordinary flows.
 
-The intent system imposes no restrictions on the implementation of input settlements. Input settlements can access proven output through validation layers by either calling [`efficientRequireProven`](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IOracle.sol#L19-L27). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification shall be the canonical solver.
+The intent system imposes no restrictions on the implementation of input settlements. Input settlements can access proven outputs through validation layers by calling [`efficientRequireProven`](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IOracle.sol#L19-L27). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification is considered the canonical solver.
 
 [Learn more about Input Settlement →](/architecture/input)
 
 ### Output Settlement
 
-The output settlement scheme handles the delivery of assets on destination chains. The output settlement scheme imposes no interface requirements, order structure, or order type except that an [interface to validate payloads](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IPayloadCreator.sol) is provided:
+The output settlement scheme handles the delivery of assets on destination chains. It imposes no interface requirements, order structure, or order type, except that an [interface to validate payloads](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IPayloadCreator.sol) must be provided:
+
 ```solidity
 interface IPayloadCreator {
     function arePayloadsValid(
@@ -42,9 +42,10 @@ interface IPayloadCreator {
     ) external view returns (bool);
 }
 ```
+
 This allows the output settlement scheme to be incredibly flexible; it can support any order type on any virtual machine, as long as the filled order can be expressed as an opaque bytes array.
 
-The initial version of the intent system uses `MandateOutput` with the encoding described by [`MandateOutputEncodingLib.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/libs/MandateOutputEncodingLib.sol).
+The initial version of the intent system uses `MandateOutput`, with the encoding described by [`MandateOutputEncodingLib.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/libs/MandateOutputEncodingLib.sol).
 
 If the input settlement could validate this call, the inputs could be appropriately paid to the solver. However, this information only exists on the output settlement on the output chain.
 
@@ -60,24 +61,27 @@ Any validation layer can be added as long as it supports validating a payload fr
 - [**Wormhole**](https://github.com/openintentsframework/oif-contracts/blob/main/src/oracles/wormhole/WormholeOracle.sol)
 - [**Bitcoin**](https://github.com/openintentsframework/oif-contracts/blob/main/src/oracles/bitcoin/BitcoinOracle.sol)
 
-It's expected that before emitting messages, the oracle checks if one or more payloads are valid and then ships them to the input chain:
+Before emitting messages, the oracle is expected to check if one or more payloads are valid and then ship them to the input chain:
+
 ```solidity
 function submit(address proofSource, bytes[] calldata payloads) external payable {
-	// Check if the payloads are valid.
-	if (!IPayloadCreator(proofSource).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+    // Check if the payloads are valid.
+    if (!IPayloadCreator(proofSource).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
 
-	// Payloads are good. We can submit them on behalf of proofSource.
-	_submit(proofSource, payloads);
+    // Payloads are valid. We can submit them on behalf of proofSource.
+    _submit(proofSource, payloads);
 }
 ```
+
 Oracles may use custom message encodings, custom relaying properties, custom interfaces, or other special integration concerns. Internal oracle messaging is not standardized.
 
-On the input chain, it is expected that the oracle system validates the payload(s) through a virtual machine local hash:
+On the input chain, the oracle system is expected to validate the payload(s) through a virtual machine local hash:
+
 ```solidity
 interface IValidationLayer {
     /**
      * @notice Check if a series of data has been attested to.
-     * @dev Does not return a boolean, instead reverts if false.
+     * @dev Does not return a boolean; instead, it reverts if false.
      * This function returns true if proofSeries is empty.
      * @param proofSeries remoteOracle, remoteChainId, and dataHash encoded in chunks of 32*4=128 bytes.
      */
@@ -87,14 +91,13 @@ interface IValidationLayer {
 }
 ```
 
-Using only the payload hash makes the system more efficient as less data is passed around. No attempt is made at standardizing the payload. As a result, there may be [incompatibilities](/architecture/overview#standardized-message-format) between the input and output settlement layers.
+Using only the payload hash makes the system more efficient, as less data is passed around. No attempt is made at standardizing the payload. As a result, there may be [incompatibilities](/architecture/overview#standardized-message-format) between the input and output settlement layers.
 
 [Learn more about Validation Layers →](/architecture/oracle)
 
-
 ## Security Assumptions
 
-The intent system includes resource locks which create trust boundaries between key actors:
+The intent system includes resource locks, which create trust boundaries between key actors:
 
 - **[Sponsors](/glossary#sponsor)** (users) trust that arbiters won't fraudulently finalize issued locks.
 - **[Arbiters](/glossary#arbiter)** and **[solvers](/glossary#solver)** trust allocators not to co-sign overlapping locks exceeding user deposits.
@@ -105,22 +108,24 @@ For more about security and intent validation, [see order-validation →](/solve
 
 ## Integration Points
 
-LI.FI intent is designed to be highly composable with different components capable of being swapped out as needed:
+LI.FI intent is designed to be highly composable, with different components capable of being swapped out as needed:
 
 - **Input Settlement**: New resource lock standards and standard intent interfaces can be integrated.
 - **Output Settlement**: New order types and fulfillment mechanisms can be added.
 - **Oracle System**: Different cross-chain messaging protocols and proof layers can be supported.
 
-[Integrators](/glossary#integrator) can freely pick and choose which components to use for which swaps. This gives intent issuers maximum flexibility to describe their desired endstate.
+[Integrators](/glossary#integrator) can freely pick and choose which components to use for which swaps. This gives intent issuers maximum flexibility to describe their desired end state.
 
 ## Unsolved Issues
 
-While the initial version is a step function improvement over competing solution at standardizing the intent stack, there are still interopability issues within the standard. For transparency, known specification issues have been listed below.
+While the initial version is a significant improvement over competing solutions at standardizing the intent stack, there are still interoperability issues within the standard. For transparency, known specification issues are listed below.
 
 ### Standardized Message Format
-Currently, the input settlement scheme and the output settlement scheme has to agree on an order-type specific payload. If a new order type or settlement system requires more functionality beyond the implemented message payload, it requires deploying these components over. This break composability between these layers.
+
+Currently, the input settlement scheme and the output settlement scheme must agree on an order-type-specific payload. If a new order type or settlement system requires more functionality beyond the implemented message payload, it requires redeploying these components. This breaks composability between these layers.
 
 Assuming the output description can be represented as:
+
 ```solidity
 struct OutputDescription {
     bytes32 remoteOracle;
@@ -133,7 +138,9 @@ struct OutputDescription {
     bytes fulfillmentContext;
 }
 ```
-The proposed message format is the following:
+
+The proposed message format is as follows:
+
 ```
 Encoded FillDescription
      SOLVER                          0               (32 bytes)
@@ -142,24 +149,26 @@ Encoded FillDescription
      + TOKEN                         68              (32 bytes)
      + AMOUNT                        100             (32 bytes)
      + RECIPIENT                     132             (32 bytes)
-     + REMOTE_CALL_LENGTH            164             (2 bytes)
-     + REMOTE_CALL                   166             (LENGTH bytes)
-     + FULFILLMENT_CONTEXT_LENGTH    166+RC_LENGTH   (2 bytes)
-     + FULFILLMENT_CONTEXT           168+RC_LENGTH   (LENGTH bytes)
+     + CALL_LENGTH                   164             (2 bytes)
+     + CALL                          166             (LENGTH bytes)
+     + CONTEXT_LENGTH                166+RC_LENGTH   (2 bytes)
+     + CONTEXT                       168+RC_LENGTH   (LENGTH bytes)
 ```
-:::note
-No assumptions are ever made on how validation layers pass messages between itself. They can pack fill descriptions however they like. [Example of a packed payload](https://github.com/catalystsystem/catalyst-intent/blob/main/src/libs/MessageEncodingLib.sol#L13-L19).
-:::
-### Atomic Swaps and HTLCs as validation layers.
 
-HTCLs works very differently from ordinary intent schemes as they require a round of strong commitments. This pre-bakes certain system assumptions which cannot be abstracted away through the OIF Intent System. As a result, these are not considered.
+:::note
+No assumptions are made about how validation layers pass messages between themselves. They can pack fill descriptions however they like. [Example of a packed payload](https://github.com/catalystsystem/catalyst-intent/blob/main/src/libs/MessageEncodingLib.sol#L13-L19).
+:::
+
+### Atomic Swaps and HTLCs as Validation Layers
+
+HTLCs work very differently from ordinary intent schemes, as they require a round of strong commitments. This pre-bakes certain system assumptions that cannot be abstracted away through the OIF Intent System. As a result, these are not considered.
 
 ### Integration Overheads
 
-As interfaces and validation layers are not standardized, each new order type, validation layer, or settlement scheme presents additional integration overhead. However, since components are eagerly reused the system complexity scales `O(n)` instead of `O(n^3)` with `n` roughly being equal to the number of components.
+As interfaces and validation layers are not standardized, each new order type, validation layer, or settlement scheme presents additional integration overhead. However, since components are eagerly reused, the system complexity scales as `O(n)` instead of `O(n^3)`, with `n` roughly being the number of components.
 
-### Optimistic Validation layers
+### Optimistic Validation Layers
 
-The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have an on-chain storage. This increases the gas cost. Ideally the specification should define a way for 1 proof to validate multiple _orders_, not just outputs.
+The current validation layers mainly support explicit validation. Optimistic validation can be implemented but requires each output to have on-chain storage, which increases gas costs. Ideally, the specification should define a way for one proof to validate multiple _orders_, not just outputs.
 
-This would likely involve using merkle trees or similar constructions to pass validated messages
+This would likely involve using Merkle trees or similar constructions to pass validated messages

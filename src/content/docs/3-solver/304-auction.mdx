@@ -1,7 +1,7 @@
 ---
 title: "Auctions"
 slug: "solver/auctions"
-description: "LI.FI intent supports various order types and auctions to get the best price for users. Solvers compete in these auctions through various means."
+description: "LI.FI intent powers on-chain auctions and flexible order types, letting you compete for fills and optimize execution across cross-chain settlement."
 sidebar:
   order: 4
 ---
@@ -33,6 +33,6 @@ uint256 timeDiff = stopTime - currentTime;
 return amount + slope * timeDiff;
 ```
 
-The max amount of the auction is `amount + (stopTime - startTime) * slope`.
+The maximum amount of the auction is `amount + (stopTime - startTime) * slope`.
 
 You can find the on-chain [implementation here](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol#L60).

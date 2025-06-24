@@ -1,7 +1,7 @@
 ---
 title: "Quoting Orders"
 slug: "solver/quoting"
-description: "To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`. This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process."
+description: "LI.FI intent enables efficient quoting and inventory management—broadcast liquidity and pricing, compete on your terms, and respond to market changes instantly."
 sidebar:
   order: 3
 ---
@@ -39,19 +39,18 @@ Prices are specified in an abstract intermediary that has to be consistent betwe
 
 
 :::caution
-It is important to factor token decimals into your quotes as otherwise assets will be priced incorrectly. 
-For a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
+It is important to factor token decimals into your quotes; otherwise, assets will be priced incorrectly. 
+For example, for a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
 
 $$Quote  = \frac{\left(1000'000'000 - 1'000'000\right) \cdot 1'000'000'000'000'000'000}{1500'000'000} - outputFee = 666'666'666'666'666'666 = 0.67\ Ether$$
 
-Note that the decimals are inversely represented. If a USDC quote is provided with 18 decimals, then an Ether quote should have $$6+18-18=6$$ decimals while another USDC quote should have $$6+18-6=18$$ decimals. A token with 8 decimals should have its quote with $$6+18-12=16$$ decimals.  
+Note that the decimals are inversely represented. If a USDC quote is provided with 18 decimals, then an Ether quote should have $$6+18-18=6$$ decimals, while another USDC quote should have $$6+18-6=18$$ decimals. A token with 8 decimals should have its quote with $$6+18-8=16$$ decimals.  
 :::
 
-
-It is important that solvers update their quotes periodically as market conditions change with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
+It is important that solvers update their quotes periodically as market conditions change, with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
 
 :::note[You can overwrite old quotes by sending new quotes]
-To avoid sending short lived quotes, the order server will overwrite existing quotes when a new one is received. This allows you to have long lived quotes and only update them as markets evolve. Alternatively, you can send very short lived quotes then preemtivly update your quotes very second.
+To avoid sending short-lived quotes, the order server will overwrite existing quotes when a new one is received. This allows you to have long-lived quotes and only update them as markets evolve. Alternatively, you can send very short-lived quotes and preemptively update your quotes every second.
 :::
 
 By broadcasting quotes in this manner, solvers can:
@@ -66,17 +65,17 @@ Submit quotes to [`/quotes/submit`](https://order-dev.li.fi/docs#/Quotes/QuotesC
 
 ## Chain & Asset Support
 
-The order server uses quotes to resolve supported chains and assets. This allows solvers to add support for new chains and assets simply by producing quotes for it.
+The order server uses quotes to determine supported chains and assets. This allows solvers to add support for new chains and assets simply by producing quotes for them.
 
 ## Authentication (WIP)
 
-While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some order server's API services.
-All solvers need to be authenticated with the order server to be able to push their inventory to the order server. Without it, the order server won't be able to offer your quotes to users.
+While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some of the order server's API services.
+All solvers must be authenticated with the order server to be able to push their inventory. Without authentication, the order server won't be able to offer your quotes to users.
 Authentication is handled via API tokens that provide secure access to the order server's protected API services.
 
 ##### Obtaining API Access
 
-To get your API token please reach out to the order server team.
+To get your API token, please reach out to the order server team.
 
 ##### Using Your API Token
 

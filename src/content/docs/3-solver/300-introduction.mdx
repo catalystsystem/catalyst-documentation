@@ -1,7 +1,7 @@
 ---
 title: "Solving LI.FI Intents"
 slug: "solver/intro"
-description: "All LI.FI intent orders can be solved permissionlessly. This page gives an introduction of how to solve intents."
+description: "LI.FI intent gives you open order flow and permissionless solving—direct access to cross-chain liquidity, fast settlement cycles, and flexible integration."
 sidebar:
   order: 0
 ---
@@ -50,21 +50,21 @@ import { Steps } from '@astrojs/starlight/components';
 
 ### Order Types
 
-LI.FI uses 3 order structures, listed from least verbose to most verbose:
-1. `BatchClaim`: Signed intent that allows for claiming input assets.
-2. `StandardOrder`: Definition of the on-chain containing enough information to conveny the intent.
-3. Order Server response: Hydrated order with additional information that may be helpful to solvers.
+LI.FI uses three order structures, listed from least to most verbose:
+1. `BatchClaim`: A signed intent that allows for claiming input assets.
+2. `StandardOrder`: An on-chain definition containing enough information to convey the intent.
+3. Order Server response: A hydrated order with additional information that may be helpful to solvers.
 
-Unless you are verifying order signatures, you won't touch `BatchClaim`, all on-chain interactions work with `StandardOrder` to standardize interfaces. However `StandardOrder` does not contain enough information to fill intents. As a result, it is hydrated off-chain with `InputSolver`, `signatures`, and more.
+Unless you are verifying order signatures, you won't interact with `BatchClaim`. All on-chain interactions use `StandardOrder` to standardize interfaces. However, `StandardOrder` does not contain enough information to fill intents. As a result, it is hydrated off-chain with `InputSolver`, `signatures`, and more.
 
 ### Collecting Orders
 
-LI.FI intent offers two ways of receiving orders:
+LI.FI Intents offers two ways to receive orders:
 
 1. **Recommended**: Connect to the order server via WebSocket.
 2. **Alternative**: Monitor on-chain deposits through the deposit interface.
 
-The order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain. From either source you will receive a `StandardOrder` and other fill details to be submitted across all VMs:
+The order server is the recommended integration surface for most solvers. However, if you are interested in the lowest latency, decentralized, and permissionless order discovery, you can read some orders on-chain. Not all orders will be discoverable on-chain. From either source, you will receive a `StandardOrder` and other fill details to be submitted across all VMs:
 
 ```solidity
 struct StandardOrder {
@@ -79,7 +79,7 @@ struct StandardOrder {
 }
 ```
 
-Where `uint256[2][] inputs === [uint256 tokenId, uint256 amount][]` and `MandateOutput`:
+Where `uint256[2][] inputs === [uint256 tokenId, uint256 amount][]` and `MandateOutput` is:
 
 ```solidity
 struct MandateOutput {
@@ -94,12 +94,12 @@ struct MandateOutput {
 }
 ```
 
-For more information on collecting orders [View Order Collection Guide →](/solver/orderflow)
+For more information on collecting orders, [View Order Collection Guide →](/solver/orderflow)
 
 ## Filling Intents
 
-To fill intents, the execution of all `MandateOutput`s has to be done; Each `MandateOutput` is a self contained execution description.
-- `output.settler` defines the execution with its associated context and should be called on its interface. Currently, only one OutputSettler is implemented: [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol) which have 2 interfaces for filling:
+To fill intents, all `MandateOutput`s must be executed. Each `MandateOutput` is a self-contained execution description.
+- `output.settler` defines the execution with its associated context and should be called on its interface. Currently, only one OutputSettler is implemented: [`OutputSettlerCoin.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol), which has two interfaces for filling:
 
 ```solidity
 /// @notice For implementing own batching functionality
