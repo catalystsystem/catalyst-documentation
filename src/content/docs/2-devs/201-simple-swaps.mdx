@@ -1,12 +1,12 @@
 ---
-title: "Swapping via Catalyst"
+title: "Issuing intents"
 slug: "devs/get-started"
-description: "Catalyst is permissionless; no component of the stack requires permissions. You can solve, create intents, and even extend the system to your needs without anyone's permission."
+description: "LI.FI intent is permissionless; no component of the stack requires permissions. You can solve, create intents, and even extend the system to your needs without anyone's permission."
 sidebar:
   order: 1
 ---
 
-Catalyst is an entirely componentized and permissionless system with no inherent trust elements.
+LI.FI intent is an entirely componentized and permissionless system with no inherent trust elements.
 It is up to integrators to mix and match components as needed.
 
 Catalyst offers two ways to swap:
@@ -137,7 +137,7 @@ You can schedule additional calls to happen after token delivery. Note that if y
 
 ## Off-chain relay via resource locks
 
-Off-chain relaying of swaps assumes that you have an existing [resource lock](/glossary#resource-lock) somewhere. This guide we assumes you use [TheCompact](/architecture/input#compactsettler). When using pure resource lock flow, ensure funds are already deposited into the lock. For alternative integrations, refer to the [on-chain flow](#on-chain-relay).
+Off-chain relaying of swaps assumes that you have an existing [resource lock](/glossary#resource-lock) somewhere. This guide we assumes you use [TheCompact](/architecture/input#inputsettlercompact). When using pure resource lock flow, ensure funds are already deposited into the lock. For alternative integrations, refer to the [on-chain flow](#on-chain-relay).
 
 ```typescript
 // Submit an order to the order server

@@ -11,16 +11,16 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/starlight": "^0.34.0",
-    "@astrojs/svelte": "^7.0.10",
-    "astro": "^5.7.3",
-    "astro-d2": "^0.7.0",
+    "@astrojs/starlight": "^0.34.4",
+    "@astrojs/svelte": "^7.1.0",
+    "astro": "^5.9.4",
+    "astro-d2": "^0.8.0",
     "astro-iconify": "^1.2.0",
     "rehype-mathjax": "^7.1.0",
     "remark-math": "^6.0.0",
-    "sharp": "^0.34.1",
-    "starlight-links-validator": "^0.16.0",
-    "svelte": "^5.27.3",
+    "sharp": "^0.34.2",
+    "starlight-links-validator": "^0.17.0",
+    "svelte": "^5.34.5",
     "typescript": "^5.8.3"
   },
   "packageManager": "pnpm@9.11.0+sha256.1c0e33f70e5df9eede84a357bdfa0b1f9dba6e58194628d48a1055756f553754"

@@ -24,7 +24,8 @@ export default defineConfig({
   integrations: [
     starlight({
       plugins: [starlightLinksValidator()],
-      title: "Catalyst Documentation",
+      title: "LI.FI Intent Documentation",
+      tableOfContents: false,
       editLink: {
         baseUrl: `https://github.com/catalystsystem/catalyst-documentation/edit/${process.env["CF_PAGES_BRANCH"]}`,
       },
@@ -40,7 +41,7 @@ export default defineConfig({
       favicon: "/favicon.ico",
       sidebar: [
         {
-          label: "Catalyst Intent System",
+          label: "Introduction",
           link: "/",
         },
         {
@@ -49,12 +50,12 @@ export default defineConfig({
             directory: "1-system-architecture",
           },
         },
-        {
-          label: "For Developers",
-          autogenerate: {
-            directory: "2-devs",
-          },
-        },
+        // {
+        //   label: "For Developers",
+        //   autogenerate: {
+        //     directory: "2-devs",
+        //   },
+        // },
         {
           label: "For Solvers",
           autogenerate: {

@@ -1,6 +1,9 @@
 :root {
   --purple-hsl: 234, 85%, 65%;
   --overlay-blurple: hsla(var(--purple-hsl), 0.2);
+  --gray-rgb: 237, 238, 243;
+  --gray-color: rgb(var(--gray-rgb));
+  --sl-color-backdrop-overlay: hsla(0, 0%, 98%, 0.66);
 }
 
 :root[data-theme="light"] {
@@ -39,4 +42,32 @@ mobile-starlight-toc nav {
 
 [data-has-hero] .hero > img {
   filter: drop-shadow(0 0 3rem var(--overlay-blurple));
+}
+
+.pagination-links {
+  border-top: 1px solid;
+  border-color: var(--gray-color);
+}
+
+div.pagination-links > a {
+  border: 0px;
+  box-shadow: none;
+}
+
+.sl-steps > li:last-child::after {
+  content: none;
+}
+
+
+site-search > dialog  {
+  background-color: hsla(0, 0%, 98%, 0.1);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: none;
+  border: 1px solid transparent;
+}
+
+site-search > dialog::backdrop {
+  background-color: transparent;
+  backdrop-filter: blur(0.1rem);
 }
