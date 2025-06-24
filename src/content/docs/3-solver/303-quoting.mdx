@@ -6,39 +6,36 @@ sidebar:
   order: 3
 ---
 
-To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
+The order server will deliver quotes to intent issuers. These are based on the available inventory provided by solvers. To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
 This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
 
-Solvers can broadcast their available liquidity and pricing information in the following format:
+The following code chunk provides an example implementation of quoting between USDC and USDC between Ethereum and Base.
 
 ```json
-// example of 2 quote chunks
 {
   "chainId": 1, // Ethereum
   "asset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
-  "fromPrice": "1000000", // price of token in USDC when sold to the solver
-  "toPrice": "1100000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in USDC when sold to the solver
-  "toCost": "1000", // cost of token in USDC when bought from the solver
+  "fromPrice": "1000000000000000000", // price of token in USDC when sold to the solver
+  "toPrice": "1100000000000000000", // price of token in USDC when bought from the solver
+  "fromCost": "1000", // cost of token in token when sold to the solver
+  "toCost": "1000", // cost of token in token when bought from the solver
   "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // optional minimum amount
+  "minAmount": 1000000, // minimum amount the solver will process
   "expiry": 1713296400 // quote expires at this timestamp
-}
-
-{
+}, {
   "chainId": 8453, // Base
-  "asset": "0xA0b86991c...", // USDC on Base, address(0) for native tokens
-  "fromPrice": "9900000", // price of token in USDC when sold to the solver
-  "toPrice": "1000000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in USDC when sold to the solver
-  "toCost": "1000", // cost of token in USDC when bought from the solver
+  "asset": "0x833589fCD...", // USDC on Base, address(0) for native tokens
+  "fromPrice": "1000000000000000000", // price of token in USDC when sold to the solver
+  "toPrice": "1100000000000000000", // price of token in USDC when bought from the solver
+  "fromCost": "1000", // cost of token in token when sold to the solver
+  "toCost": "1000", // cost of token in token when bought from the solver
   "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // optional minimum amount
+  "minAmount": 1000000, // minimum amount the solver will process
   "expiry": 1713296400 // quote expires at this timestamp
 }
 ```
 
-Prices are specified in an abstract intermediary that has to be consistent between **your** quotes. We recommended using USDC. Everything is integer priced. Make sure that your decimals are correct. The final quote will be derived as: $Quote  = \frac{\left(inputAmount - inputFee\right) \cdot inputPrice}{outputPrice} - outputFee$
+Prices are specified in an abstract intermediary that has to be consistent between **your** quotes. We recommended using USDC with 18 decimals. Everything is integer priced. Make sure that your decimals are correct. The final quote will be derived as: $$Quote  = \frac{\left(inputAmount\ -\ inputFee\right)\ \cdot\ inputPrice}{outputPrice} - outputFee$$
 
 
 :::caution
@@ -46,68 +43,32 @@ It is important to factor token decimals into your quotes as otherwise assets wi
 For a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
 
 $$Quote  = \frac{\left(1000'000'000 - 1'000'000\right) \cdot 1'000'000'000'000'000'000}{1500'000'000} - outputFee = 666'666'666'666'666'666 = 0.67\ Ether$$
+
+Note that the decimals are inversely represented. If a USDC quote is provided with 18 decimals, then an Ether quote should have $$6+18-18=6$$ decimals while another USDC quote should have $$6+18-6=18$$ decimals. A token with 8 decimals should have its quote with $$6+18-12=16$$ decimals.  
 :::
 
 
 It is important that solvers update their quotes periodically as market conditions change with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
 
 :::note[You can overwrite old quotes by sending new quotes]
-Overwriting quotes allows you to send longer lived quotes, updating them as markets evolve. Alternatively, you can send very short lived quotes then preemtivly update your quotes.
+To avoid sending short lived quotes, the order server will overwrite existing quotes when a new one is received. This allows you to have long lived quotes and only update them as markets evolve. Alternatively, you can send very short lived quotes then preemtivly update your quotes very second.
 :::
 
 By broadcasting quotes in this manner, solvers can:
 
-- Efficiently communicate their available liquidity across multiple chain and token pairs
-- Set their own pricing and fee structure
-- Define limits on transaction sizes they're willing to process
-- Update their quotes as market conditions change
+- Efficiently communicate their available liquidity across multiple chain and token pairs.
+- Set their own pricing and fee structure.
+- Define limits on transaction sizes they're willing to process.
+- Update their quotes as market conditions change.
 - The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
 
-Here's a simple JavaScript example showing how to submit quotes to the order server:
+Submit quotes to [`/quotes/submit`](https://order-dev.li.fi/docs#/Quotes/QuotesController_submitQuote).
 
-```javascript
-// Using fetch API (browser or Node.js with node-fetch)
-async function submitQuote(apiKey, quoteData) {
-  const response = await fetch("order-server-uri/quotes/submit", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify(quoteData),
-  });
+## Chain & Asset Support
 
-  if (!response.ok) {
-    throw new Error(
-      `Error submitting quote: ${response.status} ${response.statusText}`
-    );
-  }
+The order server uses quotes to resolve supported chains and assets. This allows solvers to add support for new chains and assets simply by producing quotes for it.
 
-  return await response.json();
-}
-
-// Example usage
-const apiKey = "your-api-key-here";
-const quote = {
-  chainId: 1, // Ethereum
-  asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
-  fromPrice: "1000000", // price of token in USDC when sold to the solver
-  toPrice: "1100000", // price of token in USDC when bought from the solver
-  fromCost: "1000", // cost of token in USDC when sold to the solver
-  toCost: "1000", // cost of token in USDC when bought from the solver
-  maxAmount: 1000000000, // max the solver will handle
-  minAmount: 10000000, // optional minimum amount
-  expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-};
-
-// Submit the quote
-submitQuote(apiKey, quote)
-  .then((response) => console.log("Quote submitted successfully:", response))
-  .catch((error) => console.error("Failed to submit quote:", error));
-```
-
-
-## Authentication
+## Authentication (WIP)
 
 While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some order server's API services.
 All solvers need to be authenticated with the order server to be able to push their inventory to the order server. Without it, the order server won't be able to offer your quotes to users.

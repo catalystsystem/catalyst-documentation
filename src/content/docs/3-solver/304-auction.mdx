@@ -6,46 +6,33 @@ sidebar:
   order: 4
 ---
 
-LI.FI intent supports three order types: Limit Order (First come, first serve / gas auction), Dutch Auction (on-chain), and off-chain auctions.
+LI.FI intent supports four order types: Simple limit orders, Dutch auctions, Exclusive limit orders, and Exclusive dutch auctions. Each intent output encodes a specific order type. Generally, all outputs should be of the same order type.
 
-Each output encodes a specific order type. Generally, all outputs will be of the same order type. (This is enforced.)
-
-For an order with multiple outputs, the filler of the first output will **always** be the recipient of the inputs. The inputs cannot be claimed until all outputs are filled.
-
-The _auction_ happens on-chain, with the winner determined by speed.
+For an order with multiple outputs, the solver of the first output will **always** be the recipient of the inputs. The inputs cannot be claimed until all outputs are filled. The _auction_ happens on-chain, with the winner determined by speed.
 
 ### Limit Order (First come, First serve)
 
 LI.FI intent limit orders are simple: single price, first execution. That means the amount set in `OutputDescription` is final and will be what you are paying. The output can be filled once per `orderId` (the output is hashed and stored in a map with `orderId`).
 
-The winner of an order is the first solver to call `fill` and set their identifier for the output.
+The winner of an order is the first solver to call `fill(...)` and set their identifier for the output.
 
-You can identify Limit Orders by **both** `fillerAddress` and `fulfillmentContext`. `fulfillmentContext` should be either `0x` or `0x00`.
+You can identify Limit Orders by `output.context` of either `0x` or the order type `0x00`.
 
 ### Dutch Auction
 
-LI.FI intent Dutch auctions are slightly more complicated. The fulfillment context will have the slope and stopTime encoded.
+LI.FI intent Dutch auctions are capped dutch auctions. They are fixed in price before and after certain timestamps. The slope, startTime, and stopTime are encoded in `output.context`.
 
-The winner of an order is the first solver to call `fill` and set their identifier as the output. Notice that the win selection is equivalent to the limit order, except the earlier the fill is called, the more the solver pays.
+The winner of an order is the first solver to call `fill(...)` and set their identifier as the output. Notice that the win selection is equivalent to the limit order, except the earlier the fill is called, the more the solver pays.
 
-You can identify Dutch Auctions by **both** `fillerAddress` and `fulfillmentContext`. `fulfillmentContext` should be `0x01 | uint256(slope) | uint256(stopTime)`, with the final amount being computed as:
+You can identify Dutch Auctions by the order type: `0x01`. The context is encoded as: `bytes1(0x01) | uint32(startTime) | uint32(stopTime) | uint256(slope)`, with the final amount being computed as:
 
 ```solidity
-uint32 currentTime = uint32(block.timestamp);
+uint32 currentTime = max(block.timestamp, startTime);
+if (stopTime < currentTime) return amount;
 uint256 timeDiff = stopTime - currentTime;
 return amount + slope * timeDiff;
 ```
 
-The auction happens on-chain, with the winner determined by speed and thus also price.
+The max amount of the auction is `amount + (stopTime - startTime) * slope`.
 
-### Off-chain Auctions
-
-Li.FI intent off-chain auctions allow for complex auction logic at the cost of centralization. An order can choose an off-chain entity to execute an auction on its behalf.
-
-That entity shall then sign and append information to the `Output`, which the winner of the auction can then redeem on-chain.
-
-You can identify off-chain auctions by their `fillerAddress`.
-
-The first off-chain auction will be a classical English auction; the winner will be determined as the person with the highest bid within the auction window.
-
-The auction happens off-chain, with the winner determined by the best price within the auction window.
+You can find the on-chain [implementation here](https://github.com/openintentsframework/oif-contracts/blob/main/src/output/coin/OutputSettlerCoin.sol#L60).

@@ -8,38 +8,34 @@ sidebar:
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 To settle LI.FI intent orders, up to 2 transactions may be required:
-1. Submission of self-serve message validation
+1. Submission of message validation
 2. Finalizing the order on the resource lock.
 
-If the validation layer is not self-serve or is being sponsored, only 1 transaction is needed. You can listen to the `OutputProven` event to discover when your [payload](/solver/evm#validation-layers) has been verified.
+
+## Oracle Validation
+
+For instructions on how to relay proof for oracle systems, please refer to their section in [validation](/architecture/oracle).
+
+## Finalizing Orders
+
+Once the  `OutputProven` event has been observed, the output has been validated and `finalise` can be called.
 ```
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 ```
 
-## Self-serve (in-progress)
-
-For instructions on how to relay proof for self-serve systems, please refer to their section in [validation](/architecture/oracle).
-
-## Finalizing Orders
-
-The finalize call depends on the [Input Settlement](/architecture/input), but generally, there are multiple interfaces available:
-
-1. finaliseSelf: A self-serve interface to withdraw the claim to the solver address.
-2. finaliseTo: A self-serve interface that allows you to send tokens elsewhere.
-3. finaliseFor: An interface that allows someone to finalize for you, requiring a signature from you.
-
-### CompactSettler
-
-For the CompactSettler (and compliant settlers), you need to deliver the order as you originally received it in `StandardOrder`, the attached signatures as `bytes.concat(sponsor, allocator)`, the timestamps of the fills (which can be read from the OutputFilled event), and the solver's identifier or address. If there are multiple outputs, always index lists by their position in the order.
-
-Then, finalize can be called:
+For the CompactSettler (and compliant settlers), you need to submit the `StandardOrder`, the attached signatures as `bytes.concat(sponsor, allocator)`, the timestamps of the fills (which can be read from the `OutputFilled` event), and the solver's identifier or address. If there are multiple outputs, always index lists by their position in the order. Then, finalize can be called:
 
 ```solidity
-function finaliseSelf(CatalystCompactOrder calldata order, bytes calldata signatures, uint32[] calldata timestamps, bytes32 solver) external;
-
-function finaliseTo(CatalystCompactOrder calldata order, bytes calldata signatures, uint32[] calldata timestamps, bytes32 solver, address destination, bytes calldata call) external;
+function finalise(
+    StandardOrder calldata order,
+    bytes calldata signatures,
+    uint32[] calldata timestamps,
+    bytes32[] memory solvers,
+    bytes32 destination,
+    bytes calldata call
+) external;
 ```
 
 :::note
-If an order contains multiple outputs and two solvers filled different outputs, then the solver of the 0th (or first) output is the canonical solver. However, the associated backup functions should be called instead with a list of the solvers as indexed by order.outputs.
+If an order contains multiple outputs and two solvers filled different outputs, then the solver of the 0th (first) output is the canonical solver.
 :::
