@@ -72,6 +72,7 @@ The following is an attempt at an exhaustive list of validations that solvers mu
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, ensure you can execute it and other outputs atomically. For outputs on different chains, you may have to whitelist recipients if there is `calldata`.
         - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree. If similar contracts exist on another chain, they also need to be blacklisted.
+    8. Neither `call.length` nor `context.length` are more than 65'535 bytes long. 
 
 10. If the order has multiple outputs, ensure you can fill all outputs and the first output is set to your solver identifier. If all outputs are on the same chain, `fillBatch` can be used as a protective measure.
 11. Validate the `allocatorData`. You may have to do an on-chain call.
