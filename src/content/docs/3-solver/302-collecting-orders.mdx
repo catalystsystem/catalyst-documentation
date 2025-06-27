@@ -54,7 +54,7 @@ The following is an attempt at an exhaustive list of validations that solvers mu
 3. Validation layer: Ensure you support submitting proofs (and, if not automatic, also relaying) to the validation layer. Additionally, the `localOracle` and `remoteOracle` must be of the same validation layer.
 4. Ensure you have whitelisted every single `input` token. If one input token is malicious, the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure you are not on a blacklist.
     - If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing unfamiliar tokens.
-5. Ensure every `input` token uses the same lockid.
+5. Ensure every `input` token uses the same AllocatorId. If the lockId are different, the lock expiry should be checked for every lockId. Alternatively, check if all lockIds are equal.
 6. Ensure the potential `reset period` for a resource lock extends beyond the `expiry` AND there is no active withdrawal.
 7. Ensure the `allocatorID` is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
     - The allocatorID is part of the `lock tag` for `inputs` (first 12 bytes).
@@ -72,11 +72,13 @@ The following is an attempt at an exhaustive list of validations that solvers mu
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, ensure you can execute it and other outputs atomically. For outputs on different chains, you may have to whitelist recipients if there is `calldata`.
         - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree. If similar contracts exist on another chain, they also need to be blacklisted.
-    8. Neither `call.length` nor `context.length` are more than 65'535 bytes long. 
+    8. Neither `call.length` nor `context.length` are more than 65'535 bytes long.
+    9. Validate the context depending on order type. For Bitcoin specfically, ensure the encoded multiplier is relative to the Bitcoin value.
 
 10. If the order has multiple outputs, ensure you can fill all outputs and the first output is set to your solver identifier. If all outputs are on the same chain, `fillBatch` can be used as a protective measure.
 11. Validate the `allocatorData`. You may have to do an on-chain call.
 12. Validate that the allocator `nonce` has not been spent previously by any user. The Order nonce is not a user nonce.
+13. If the InputSettler has any fees, check for an imminent fee change.
 
 
 :::note
