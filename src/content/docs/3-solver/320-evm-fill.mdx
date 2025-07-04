@@ -28,4 +28,4 @@ function fillOrderOutputs(
 ) external;
 ```
 
-Note that `fill` does not revert if an output has already been filled. It instead returns the address of the solver that has been recorded as the filler. You will not be debited any assets. If you need the fill to revert, use `fillOrderOutputs`.
+Note that `fill` does not revert if an output has already been filled. It instead returns an identifier linked to the existing fill, without debiting any further assets. If it is desired for the `fill` call to revert, refer to `fillOrderOutputs`.
