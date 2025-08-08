@@ -52,7 +52,7 @@ To finalise orders to get paid their inputs, the relevant finalise functions hav
 
 ### Compact Intent Registration
 
-Intents are transfered as `StandardOrder`, within the Compact they are signed as a `BatchClaim` with the following structure:
+Intents are transferred as `StandardOrder`, within the Compact they are signed as a `BatchClaim` with the following structure:
 
 ```solidity
 struct BatchCompact {
@@ -75,9 +75,9 @@ Intents are EIP712-signed `BatchClaim`s using The Compact's domain separator.
 
 Alternatively, intents can be registered on-chain. There are two ways to do this: either the sponsor (user) registers it, or someone pays for the entire claim and registers it on their behalf.
 
-### Escrow Compact Reigstration 
+### Escrow Compact Registration 
 
-Intents are transfered as `StandardOrder` but can be registered in several ways:
+Intents are transferred as `StandardOrder` but can be registered in several ways:
 1. Registered by their owner through ERC-7683 `function open(bytes)`. This emits a ERC-7683 `event Open(bytes32 indexed orderId, bytes order)` and also sets its `function orderStatus(bytes)` to 1.
 2. Registered through ERC-3009 with the orderId as the nonce.. For each input a signature has to be provided and then `0x01, abi.encode(bytes[])`.
 3. Registered through Permit2 with the signature provided as `0x00, bytes` from the EIP-712 signed object `PermitBatchWitnessTransferFrom`:
