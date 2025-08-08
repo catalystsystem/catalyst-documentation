@@ -77,7 +77,7 @@ struct CatalystCompactOrder {
     /** @dev The expiry of the lock. Enough time for the fill and validation needs to be provided. */
     uint32 fillDeadline;
     /** @dev Address of the validation layer on the origin chain. */
-    address localOracle;
+    address inputOracle;
     uint256[2][] inputs;
     OutputDescription[] outputs;
 }
@@ -97,7 +97,7 @@ struct BatchCompact {
 
 struct CatalystWitness {
     uint32 fillDeadline; // CatalystCompactOrder.fillDeadline
-    address localOracle; // CatalystCompactOrder.localOracle
+    address inputOracle; // CatalystCompactOrder.inputOracle
     OutputDescription[] outputs; // CatalystCompactOrder.outputs
 }
 ```
@@ -112,26 +112,26 @@ For `TheCompact`, the inputs need to be provided as an array of `[uint256 tokenI
 
 ```solidity
 struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
+    bytes32 oracle;
+    bytes32 settler;
     uint256 chainId;
     bytes32 token;
     uint256 amount;
     bytes32 recipient;
-    bytes remoteCall;
-    bytes fulfillmentContext;
+    bytes call;
+    bytes context;
 }
 ```
 
-Note that `OutputDescription.remoteOracle` and `CatalystCompactOrder.localOracle` need to match. Together, they define the validation layer used. Each order should only use one validation layer, which can be an aggregation of AMBs.
+Note that `OutputDescription.oracle` and `CatalystCompactOrder.inputOracle` need to match. Together, they define the validation layer used. Each order should only use one validation layer, which can be an aggregation of AMBs.
 
-`remoteFiller` specifies the output type. For limit orders, use the `CoinFiller` and set `fulfillmentContext` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `fulfillmentContext` [appropriately](/solver/auctions#dutch-auction).
+`settler` specifies the output type. For limit orders, use the `CoinFiller` and set `context` as empty (`0x`). For Dutch auctions, use the `CoinFiller` and set `context` [appropriately](/solver/auctions#dutch-auction).
 
 Specify the token as the `bytes32` identifier. For EVM, the address is left-padded, e.g., `0x000...00abcdef`.
 
-#### RemoteCall
+#### Call
 
-You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `remoteCall` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the [Catalyst Multicaller](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) can be used.
+You can schedule additional calls to happen after token delivery. Note that if you have configured multiple outputs, the order of execution is not guaranteed (it may happen over multiple blocks). If `call` is provided, the `recipient` is called using the Catalyst interfaces. For arbitrary calls, the [Catalyst Multicaller](https://github.com/catalystsystem/catalyst-intent/blob/main/src/integrations/CatsMulticallHandler.sol) can be used.
 
 [Learn more about Sub-Calls →](/devs/calls)
 
@@ -169,7 +169,7 @@ const submitOrder = async () => {
         nonce: 1005,
         originChainId: 84532,
         fillDeadline: 1744884642,
-        localOracle: "0xada1de62bE4F386346453A5b6F005BCdBE4515A1",
+        inputOracle: "0xada1de62bE4F386346453A5b6F005BCdBE4515A1",
         inputs: [
           [
             "36286452483532273188258183071097127586156282419649613466036116694645176389502",
@@ -178,9 +178,9 @@ const submitOrder = async () => {
         ],
         outputs: [
           {
-            remoteOracle:
+            oracle:
               "0x0000000000000000000000007bc921c858c5390d9fd74c337dd009ec9a1b6b8f",
-            remoteFiller:
+            settler:
               "0x0000000000000000000000005d14806127d7caafcb8028c7736ae6b8aec583d9",
             chainId: 11155111,
             token:
@@ -188,8 +188,8 @@ const submitOrder = async () => {
             amount: 1000000,
             recipient:
               "0x0000000000000000000000009773dacbc46cafb4e055060565e319922b48607d",
-            remoteCall: "0x",
-            fulfillmentContext: "0x",
+            call: "0x",
+            context: "0x",
           },
         ],
       },
