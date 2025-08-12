@@ -5,8 +5,8 @@ export type DutchAuctionData = {
   collateralToken: string;
   fillerCollateralAmount: string;
   challengerCollateralAmount: string;
-  localOracle: string;
-  remoteOracle: string;
+  inputOracle: string;
+  oracle: string;
   slopeStartingTime: number;
   inputSlope: string;
   outputSlope: string;
@@ -21,8 +21,8 @@ export type LimitOrderData = {
   collateralToken: string;
   fillerCollateralAmount: string;
   challengerCollateralAmount: string;
-  localOracle: string;
-  remoteOracle: string;
+  inputOracle: string;
+  oracle: string;
   inputs: {}[];
   outputs: {}[];
 };

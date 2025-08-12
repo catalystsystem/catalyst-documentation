@@ -45,45 +45,54 @@ Below, the term whitelisted refers to trusted and validated by **you**. When a t
 
 The following is an attempt at an exhaustive list of validations that solvers must implement. While this list may seem excessive, you have likely already implemented checks for most of these.
 
+### General Validation
+
 1. `fillDeadline`: Ensure you have sufficient time to fill the order:
     - Time to fill on the destination chain, including potential source chain finality.
 2. `expiry`: Ensure you have enough time to fill, relay, and claim the order:
     - Time to fill on the destination chain, including potential source chain finality.
     - Time to send message validation proof to the input chain.
     - Time to claim the order after validation has been delivered.  
-3. Validation layer: Ensure you support submitting proofs (and, if not automatic, also relaying) to the validation layer. Additionally, the `localOracle` and `remoteOracle` must be of the same validation layer.
-4. Ensure you have whitelisted every single `input` token. If one input token is malicious, the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure you are not on a blacklist.
+3. Validation layer: Ensure you support submitting proofs (and, if not automatic, also relaying) to the validation layer. Additionally, the `inputOracle` and `output.oracle` must be of the same validation layer.
+4. Ensure you have whitelisted every `input` token. If one input token is malicious, the order may be unclaimable. Additionally, for blacklistable tokens like USDC, ensure you are not on a blacklist. 
     - If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing unfamiliar tokens.
-5. Ensure every `input` token uses the same AllocatorId. If the lockId are different, the lock expiry should be checked for every lockId. Alternatively, check if all lockIds are equal.
-6. Ensure the potential `reset period` for a resource lock extends beyond the `expiry` AND there is no active withdrawal.
-7. Ensure the `allocatorID` is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
-    - The allocatorID is part of the `lock tag` for `inputs` (first 12 bytes).
-    - Optionally, ensure the user has sufficient tokens. This should have been validated by the allocator, though.
-8. Ensure the user provides an ECDSA signature **or** they have a whitelisted [emissary](/glossary#emissary) registered **or** you register the claim on-chain before filling the claim.
-    - Note: If any of these actions are taken, the signature can be assumed to be trusted.
-    - Emissary signatures cannot be registered on-chain. The emissary must be trusted not to redact a signature.
-9. For each output:
+5. For each output:
     1. `output.chainId` is whitelisted.
-    2. `remoteOracle` and `localOracle` are correctly configured regarding `originChainId` and `output.chainId`. The config is immutable, so this can be done once for each pair.
-    3. `output.remoteFiller` is whitelisted.
-    4. `output.fulfillmentContext` is decodable, and the order type is supported and compatible with `output.remoteFiller`.
+    2. `output.oracle` and `inputOracle` are correctly configured regarding `originChainId` and `output.chainId`. On-chain configs are immutable, so this can be done once for each chain pair.
+    3. `output.settler` is whitelisted.
+    4. `output.context` is decodable, and the order type is supported and compatible with `output.settler`.
     5. `output.token` is whitelisted. Additionally, for blacklistable tokens like USDC, ensure that neither you nor the recipient is on a blacklist.
         - If an order has a 0 input or output of a token you have not whitelisted, the order may not be fillable. Be careful about filling orders containing unfamiliar tokens.
     6. You have sufficient tokens for `output.amount`.
     7. If the output has `calldata`, ensure you can execute it and other outputs atomically. For outputs on different chains, you may have to whitelist recipients if there is `calldata`.
         - On OP-chains, [CrossL2Inbox](https://specs.optimism.io/interop/predeploys.html#validatemessage) needs to be blacklisted in the entire call tree. If similar contracts exist on another chain, they also need to be blacklisted.
     8. Neither `call.length` nor `context.length` are more than 65'535 bytes long.
-    9. Validate the context depending on order type. For Bitcoin specfically, ensure the encoded multiplier is relative to the Bitcoin value.
-
-10. If the order has multiple outputs, ensure you can fill all outputs and the first output is set to your solver identifier. If all outputs are on the same chain, `fillBatch` can be used as a protective measure.
-11. Validate the `allocatorData`. You may have to do an on-chain call.
-12. Validate that the allocator `nonce` has not been spent previously by any user. The Order nonce is not a user nonce.
-13. If the InputSettler has any fees, check for an imminent fee change.
-
+    9. Validate the context depending on order type. For Bitcoin specifically, ensure the encoded multiplier is relative to the Bitcoin value.
+6. If the order has multiple outputs, ensure you can fill all outputs and the first output is set to your solver identifier. If all outputs are on the same chain, `fillBatch` can be used as a protective measure.
+7. If the InputSettler has any fees, check for an imminent fee change.
 
 :::note
-Tokens inputs are provided as uint256. This is a standard format for resource locks and cross-chain addresses. For EVM, the first 12 bytes is the lock tag and the address is the last 20 bytes.
+Tokens inputs are provided as uint256. This is a standard format for resource locks and cross-chain addresses. For EVM, the first 12 bytes represents a potential lock tag and the address is the last 20 bytes.
 :::
+
+### Escrow Validation
+
+1. Ensure no input tokens are fee on transfer.
+2. Ensure every `inputs` token has no set bits in its upper 12 bytes.
+3. Ensure the order has already been opened, either through the `event Open` or `function orderStatus` OR you are opening the order through `function openFor´ before filling the order.
+
+### Compact Validation
+
+1. Ensure every `input` token uses the same AllocatorId. If the lockId are different, the lock expiry should be checked for every lockId. Alternatively, check if all lockIds are equal.
+2. Ensure the potential `reset period` for a resource lock extends beyond the `expiry` AND there is no active withdrawal.
+3. Ensure the `allocatorID` is whitelisted. The allocator can block claims from processing (by withdrawing signatures or reusing nonces.)
+    - The allocatorID is part of the `lock tag` for `inputs` (first 12 bytes).
+    - Optionally, ensure the user has sufficient tokens. This should have been validated by the allocator, though.
+4. Ensure the user provides an ECDSA signature **or** they have a whitelisted [emissary](/glossary#emissary) registered **or** you register the claim on-chain before filling the claim.
+    - Note: If any of these actions are taken, the signature can be assumed to be trusted.
+    - Emissary signatures cannot be registered on-chain. The emissary must be trusted not to redact a signature.
+5. Validate the `allocatorData`. You may have to do an on-chain call.
+6. Validate that the allocator `nonce` has not been spent previously by any user. The Order nonce is not a user nonce.
 
 ### Signature Validation
 
@@ -103,7 +112,7 @@ struct BatchCompact {
 
 struct Mandate {
     uint32 fillDeadline; // StandardOrder.fillDeadline
-    address localOracle; // StandardOrder.localOracle
+    address inputOracle; // StandardOrder.inputOracle
     OutputDescription[] outputs; // StandardOrder.outputs
 }
 ```

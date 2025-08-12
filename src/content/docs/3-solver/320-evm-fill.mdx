@@ -10,16 +10,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 To be able to finalise an intent, all outputs have to be delivered. This is done by submitting the intent outputs to the Output Settler as described by `output.settler`.
 
-Currently, only one Output Settler is supported exposing 2 [fill interfaces](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/output/BaseOutputSettler.sol#L101-L151):
-
 ```solidity
-function fill(
-    uint32 fillDeadline,
-    bytes32 orderId,
-    MandateOutput calldata output,
-    bytes32 proposedSolver
-) external virtual returns (bytes32 actualSolver);
-
 function fillOrderOutputs(
     uint32 fillDeadline,
     bytes32 orderId,
@@ -28,4 +19,14 @@ function fillOrderOutputs(
 ) external;
 ```
 
-Note that `fill` does not revert if an output has already been filled. It instead returns an identifier linked to the existing fill, without debiting any further assets. If it is desired for the `fill` call to revert, refer to `fillOrderOutputs`.
+The transaction reverts if one of the following is true:
+1. Approvals are not set.
+2. Caller balances are not sufficient.
+3. FillDeadline has expired.
+4. The **first** output in `outputs` has been filled.
+5. **Any** external call in `outputs` reverts.
+6. The order context cannot be decoded.
+7. The destination chain is wrong.
+8. The Output Settler contract is wrong.
+
+An `orderId` mismatch will not cause a revert.

@@ -62,7 +62,7 @@ struct Instructions {
 }
 ```
 
-When used: set `remoteCall = abi.encode(Instructions)`.
+When used: set `call = abi.encode(Instructions)`.
 
 For the default Catalyst `OutputDescription`:
 
@@ -70,14 +70,14 @@ import { Code } from '@astrojs/starlight/components';
 
 export const outputDescription = `
 struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
+    bytes32 oracle;
+    bytes32 settler;
     uint256 chainId;
     bytes32 token;
     uint256 amount;
     bytes32 recipient; // = addressOf(CatsMulticallHandler)
-    bytes remoteCall; // = abi.encode(Instructions)
-    bytes fulfillmentContext;
+    bytes call; // = abi.encode(Instructions)
+    bytes context;
 }`;
 
-<Code code={outputDescription} lang="solidity" mark={['bytes32 recipient; // = addressOf(CatsMulticallHandler)', 'bytes remoteCall; // = abi.encode(Instructions)']} />
+<Code code={outputDescription} lang="solidity" mark={['bytes32 recipient; // = addressOf(CatsMulticallHandler)', 'bytes call; // = abi.encode(Instructions)']} />

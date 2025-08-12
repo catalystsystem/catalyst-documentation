@@ -24,7 +24,7 @@ By integrating with Catalyst, you gain access to our network of solvers who comp
 
 ### Simple Integration
 
-Catalyst is designed to work with common resource lock standards like [The Compact](/architecture/input#inputsettlercompact). No custom development is required, significantly reducing the engineering effort needed to support cross-chain functionality.
+Catalyst is designed to work with common resource lock standards like [The Compact](/architecture/input#compact-intent-registration). No custom development is required, significantly reducing the engineering effort needed to support cross-chain functionality.
 
 ### Flexibility to Expand
 
@@ -54,6 +54,6 @@ Our full integration guide provides detailed instructions, code examples, and be
 
 By default, Catalyst supports calls on delivery. This allows you to schedule calldata to be executed after the delivery of assets, enabling more complex cross-chain operations.
 
-The default output type of Catalyst, called `OutputDescription`, supports secondary calls through its `remoteCall` field, allowing for additional execution logic upon delivery.
+The default output type of Catalyst, called `OutputDescription`, supports secondary calls through its `call` field, allowing for additional execution logic upon delivery.
 
 [Learn more about Sub-Calls →](/devs/calls)

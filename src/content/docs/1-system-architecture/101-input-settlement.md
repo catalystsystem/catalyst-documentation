@@ -6,10 +6,13 @@ sidebar:
   order: 1
 ---
 
-Currently, only one Input Settler is supported:
+Two Single Chain Input Settlers are supported:
+- [**InputSettlerEscrow**](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/escrow/InputSettlerEscrow.sol)
 - [**InputSettlerCompact**](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol)
 
-The Compact uses resource locks and supports first-fill flows. However, LI.FI intents also support escrow-like flows.
+[Work is in progress](https://github.com/openintentsframework/oif-contracts/pull/49) to support multi chain inpurts settlers.
+
+The Compact uses resource locks and supports fill-first flows. For traditional flows without resource locks, the escrow settler can be used. Escrow flows are not safe in fill-first flows and have to be opened before fills.
 
 #### Default Output
 The default output for settlement schemes is [`MandateOutput`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/MandateOutputType.sol#L4-L18):
@@ -27,9 +30,9 @@ struct MandateOutput {
 ```
 To verify if the encoded output description has been validated, send the hashed encoded payload to the appropriate local oracle along with relevant resolution details, such as the solver's identity.
 
-## InputSettlerCompact
+## Single Chain Inputs
 
-The Compact Settler uses the [`StandardOrder`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/StandardOrderType.sol#L6-L15):
+Single Chain Input Settlers uses [`StandardOrder`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/StandardOrderType.sol#L6-L15):
 ```solidity
 struct StandardOrder {
     address user;
@@ -37,21 +40,19 @@ struct StandardOrder {
     uint256 originChainId;
     uint32 expires;
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     uint256[2][] inputs;
     MandateOutput[] outputs;
 }
 ```
 
-The CompactSettler supports two ways to resolve locks once outputs are available for verification by the validation layer:
+To finalise orders to get paid their inputs, the relevant finalise functions have to be called. 2 endpoints are available:
+1. `finalise`: To be called by the solver, the caller can designate where to send assets and whether to make an external call. Note that the Escrow & Compact interfaces are different to optimise for gas.
+2. `finaliseWithSignature`: Can be called by anyone with an [`AllowOpen`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/AllowOpenType.sol#L5-L9l) signature from the solver, containing the destination and call details.
 
-There are two ways to finalize an intent:
-1. [`finalise`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L177-L184): Can only be called by the solver. The caller can designate where to send assets and whether to make an external call.
-2. [`finaliseWithSignature`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol#L213-L221): Can be called by anyone with an [`AllowOpen`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/types/AllowOpenType.sol#L5-L9l) signature from the solver, containing the destination and call details.
+### Compact Intent Registration
 
-### Intent Registration
-
-While intents are transferred as `StandardOrder` structures, they are signed as a `BatchClaim` with the following structure:
+Intents are transferred as `StandardOrder`, within the Compact they are signed as a `BatchClaim` with the following structure:
 
 ```solidity
 struct BatchCompact {
@@ -62,12 +63,10 @@ struct BatchCompact {
     uint256[2][] idsAndAmounts;
     Mandate mandate;
 }
-```
-With the Mandate defined as:
-```solidity
+// With the Mandate defined as:
 struct Mandate {
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     MandateOutput[] outputs;
 }
 ```
@@ -75,6 +74,34 @@ struct Mandate {
 Intents are EIP712-signed `BatchClaim`s using The Compact's domain separator.
 
 Alternatively, intents can be registered on-chain. There are two ways to do this: either the sponsor (user) registers it, or someone pays for the entire claim and registers it on their behalf.
+
+### Escrow Compact Registration 
+
+Intents are transferred as `StandardOrder` but can be registered in several ways:
+1. Registered by their owner through ERC-7683 `function open(bytes)`. This emits a ERC-7683 `event Open(bytes32 indexed orderId, bytes order)` and also sets its `function orderStatus(bytes)` to 1.
+2. Registered through ERC-3009 with the orderId as the nonce.. For each input a signature has to be provided and then `0x01, abi.encode(bytes[])`.
+3. Registered through Permit2 with the signature provided as `0x00, bytes` from the EIP-712 signed object `PermitBatchWitnessTransferFrom`:
+
+    ```solidity
+    struct PermitBatchWitnessTransferFrom {
+        TokenPermissions[] permitted;
+        address spender;
+        uint256 nonce;
+        uint256 deadline;
+        Permit2Witness witness;
+    }
+    // With TokenPermissions as
+    TokenPermissions(
+        address token;
+        uint256 amount;
+    )
+    // With Permit2Witness as
+    Permit2Witness(
+        uint32 expires;
+        address inputOracle;
+        MandateOutput[] outputs;
+    )
+    ```
 
 #### Integration Examples
 

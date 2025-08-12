@@ -40,7 +40,7 @@ import { Steps } from '@astrojs/starlight/components';
 4. The proof is delivered to the input chain through the validation layer.
 
     :::note[[Oracle system](/architecture/oracle)]
-    is denoted as the `localOracle` and `output.oracle` in the order struct.
+    is denoted as the `inputOracle` and `output.oracle` in the order struct.
     :::
 
 5. The solver submits the order to the input settlement contract, verifying the delivery and unlocking the associated input tokens.
@@ -73,7 +73,7 @@ struct StandardOrder {
     uint256 originChainId;
     uint32 expires;
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     uint256[2][] inputs;
     MandateOutput[] outputs;
 }
@@ -123,16 +123,25 @@ For more information about filling intents [View EVM Order Filling Guide →](/s
 
 ## Validating Fills
 
-After filling intents, the proof of fill has to be sent to the input chain. The oracle system used for the order is specified through `localOracle` and `output.oracle`. These should match. However, validating filled outputs is highly oracle specific. For more, [View Oracle System Architecture ->](/architecture/oracle/#implemented-validation-interfaces) ->
+After filling intents, the proof of fill has to be sent to the input chain. The oracle system used for the order is specified through `inputOracle` and `output.oracle`. These should match. However, validating filled outputs is highly oracle specific. For more, [View Oracle System Architecture ->](/architecture/oracle/#implemented-validation-interfaces) ->
 
 ## Settling Orders
 
 Lastly, intents have to be settled before their expiry. This is achieved by calling `finalise[withSignature]` on the designated InputSettler. The caller has to be the designated solver set on fill.
 
 ```solidity
+// For the Compact Input Settler
 function finalise(
     StandardOrder calldata order,
     bytes calldata signatures,
+    uint32[] calldata timestamps,
+    bytes32[] memory solvers,
+    bytes32 destination,
+    bytes calldata call
+) external;
+// Or for the Escrow Input Settler
+function finalise(
+    StandardOrder calldata order,
     uint32[] calldata timestamps,
     bytes32[] memory solvers,
     bytes32 destination,

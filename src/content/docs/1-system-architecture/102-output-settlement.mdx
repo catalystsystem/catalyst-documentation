@@ -30,8 +30,8 @@ uint256 slope;
 uint256 stopTime;
 string orderType; // "limit" or "dutch"
 
-if (orderType == "limit") fulfillmentContext = "0x" || fulfillmentContext = "0x00";
-if (orderType == "dutch") fulfillmentContext = abi.encodePacked(0x01, slope, stopTime);
+if (orderType == "limit") context = "0x" || context = "0x00";
+if (orderType == "dutch") context = abi.encodePacked(0x01, slope, stopTime);
 ```
 
 Specifically for Dutch auctions, if the order contains multiple outputs, only the first one will function as an auction. The rest will resolve to the worst price. This is because solvers are only incentivized to compete on the first output in an order, since the winner of that output is the winner of the entire order once anyone fills the remaining outputs.

@@ -21,11 +21,10 @@ Historically, these components have been intertwined, which presented scaling ch
 
 ### Input Settlement
 
-The input settlement scheme manages user deposits and releases funds to solvers once intents are fulfilled. LI.FI intent currently implements one input settlement scheme:
+The input settlement scheme manages user deposits and releases funds to solvers once intents are fulfilled. The Open Intents Framework currently implements two input settlement scheme:
 
-- [**TheCompact**](https://github.com/Uniswap/the-compact) via [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/d238f87d01552986b66d392d0f2ea77bd6e25f2f/src/input/compact/InputSettlerCompact.sol)
-
-Resource locks support both fill-first flows and ordinary flows.
+- **Escrow** via [`InputSettlerEscrow.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/escrow/InputSettlerEscrow.sol)
+- [**TheCompact**](https://github.com/Uniswap/the-compact) via [`InputSettlerCompact.sol`](https://github.com/openintentsframework/oif-contracts/blob/main/src/input/compact/InputSettlerCompact.sol). The Compact supports both fill-first flows and ordinary flows.
 
 The intent system imposes no restrictions on the implementation of input settlements. Input settlements can access proven outputs through validation layers by calling [`efficientRequireProven`](https://github.com/openintentsframework/oif-contracts/blob/main/src/interfaces/IOracle.sol#L19-L27). If an order contains multiple outputs and the outputs are filled by different solvers, **the filler of the first output** in the order specification is considered the canonical solver.
 
@@ -83,7 +82,7 @@ interface IValidationLayer {
      * @notice Check if a series of data has been attested to.
      * @dev Does not return a boolean; instead, it reverts if false.
      * This function returns true if proofSeries is empty.
-     * @param proofSeries remoteOracle, remoteChainId, and dataHash encoded in chunks of 32*4=128 bytes.
+     * @param proofSeries oracle, remoteChainId, and dataHash encoded in chunks of 32*4=128 bytes.
      */
     function efficientRequireProven(
         bytes calldata proofSeries
@@ -128,14 +127,14 @@ Assuming the output description can be represented as:
 
 ```solidity
 struct OutputDescription {
-    bytes32 remoteOracle;
-    bytes32 remoteFiller;
+    bytes32 oracle;
+    bytes32 settler;
     uint256 chainId;
     bytes32 token;
     uint256 amount;
     bytes32 recipient;
-    bytes remoteCall;
-    bytes fulfillmentContext;
+    bytes call;
+    bytes context;
 }
 ```
 
