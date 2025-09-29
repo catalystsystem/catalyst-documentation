@@ -3,7 +3,7 @@ title: "Quoting Orders"
 slug: "solver/quoting"
 description: "LI.FI intent enables efficient quoting and inventory management—broadcast liquidity and pricing, compete on your terms, and respond to market changes instantly."
 sidebar:
-  order: 3
+  order: 4
 ---
 
 The order server will deliver quotes to intent issuers. These are based on the available inventory provided by solvers. To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
@@ -37,9 +37,8 @@ The following code chunk provides an example implementation of quoting between U
 
 Prices are specified in an abstract intermediary that has to be consistent between **your** quotes. We recommended using USDC with 18 decimals. Everything is integer priced. Make sure that your decimals are correct. The final quote will be derived as: $$Quote  = \frac{\left(inputAmount\ -\ inputFee\right)\ \cdot\ inputPrice}{outputPrice} - outputFee$$
 
-
 :::caution
-It is important to factor token decimals into your quotes; otherwise, assets will be priced incorrectly. 
+It is important to factor token decimals into your quotes; otherwise, assets will be priced incorrectly.
 For example, for a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
 
 $$Quote  = \frac{\left(1000'000'000 - 1'000'000\right) \cdot 1'000'000'000'000'000'000}{1500'000'000} - outputFee = 666'666'666'666'666'666 = 0.67\ Ether$$
