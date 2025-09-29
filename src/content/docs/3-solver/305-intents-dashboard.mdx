@@ -1,0 +1,136 @@
+---
+title: "LI.FI Intents Dashboard"
+slug: "solver/dashboard"
+description: "The LI.FI Intents Dashboard enables solvers to manage their operations, create API keys, and participate in the intent marketplace for cross-chain transfers."
+sidebar:
+  order: 3
+---
+
+![LI.FI Intents Dashboard](/dashboard/1.png)
+
+The LI.FI Intents Dashboard is a web application that allows solvers to manage their operations within the LI.FI intent marketplace. This platform serves as the central hub for solvers to monitor their performance, manage API access, and configure their solver identity.
+It is a self serving platform. If you have any issues, please [reach out to us](mailto:hello@li.fi).
+
+## Getting Started
+
+### Account Creation
+
+Users can create an account by signing up through the dashboard. Once registered, they gain access to the solver management interface.
+
+### Solver Identity Setup
+
+![Registering Solver Identity](/dashboard/2.png)
+
+After creating an account, users must set up their solver identity by configuring a solver name. This identity is required before users can create API keys or participate in the marketplace.
+
+### API Key Management
+
+![Creating API Keys](/dashboard/3.png)
+
+Once a solver identity is established, users can create and manage API keys. These API keys are essential for:
+
+- **Pushing Quotes**: Submit inventory quotes to the order server using the `/quotes/submit` endpoint
+- **Registering Solver Accounts**: Solver accounts are essentials for reputation tracking.
+
+## Solver Account Registration
+
+:::note
+Solver addresses are registered through a cryptographic signature verification process that ensures only legitimate address owners can register their addresses as solver accounts.
+:::
+
+### Registration Endpoint
+
+**Endpoint**: `POST /solver-api/account/register`  
+**Authentication**: Required (API Key)  
+**Content-Type**: `application/json`
+
+### Request Format
+
+```json
+{
+  "address": "0x1234567890123456789012345678901234567890",
+  "message": "Hello, world!",
+  "signature": "0x1234567890abcdef..."
+}
+```
+
+### Registration Process
+
+1. **Signature Verification**: The system validates that the signature was created by the claimed address using Ethereum's `verifyMessage` function
+2. **Address Uniqueness Check**: Each address can only be registered once across the entire system
+3. **Solver Association**: The address is automatically linked to the solver account associated with the API key used for authentication
+
+### Example Registration Flow
+
+```typescript
+// 1. Sign a message with your solver address
+// Using ethers.js or similar library
+const message = "Hello, world!";
+const signature = await wallet.signMessage(message);
+```
+
+```bash
+# 2. Register the address
+curl -X POST "https://order-dev.li.fi/solver-api/account/register" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_your_api_key_here" \
+  -d '{
+    "address": "0x1234567890123456789012345678901234567890",
+    "message": "Hello, world!",
+    "signature": "0x1234567890abcdef..."
+  }'
+```
+
+### Response
+
+**Success Response**:
+
+```json
+{
+  "id": 1,
+  "address": "0x1234567890123456789012345678901234567890",
+  "solverId": 5,
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid request data
+- `401 Unauthorized`: Invalid signature or API key
+- `403 Forbidden`: Address already registered
+- `404 Not Found`: Solver not found
+
+### Managing Registered Addresses
+
+**View Registered Addresses**: `GET /solver-api/solver/identities`
+
+Returns all addresses registered under your solver account:
+
+```json
+[
+  {
+    "id": 1,
+    "address": "0x1234567890123456789012345678901234567890",
+    "solverId": 5,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+You can also view the registered addresses through the dashboard in the settings page.
+
+![Registered Addresses](/dashboard/5.png)
+
+### Performance Monitoring
+
+The dashboard displays key metrics including:
+
+- Orders quoted
+- Quotes uploaded
+- Orders filled
+- Current reputation score
+
+![Metrics](/dashboard/4.png)
