@@ -92,6 +92,16 @@ By broadcasting quotes in this manner, solvers can:
 
 Users can request quotes using the `/quote/request` endpoint. This endpoint does not require authentication and accepts an OIF (Order Intent Format) quote request.
 
+### Open Intent Framework (OIF) Compliance
+
+The quote request endpoint adheres to the [Open Intent Framework (OIF) specifications](https://github.com/openintentsframework/oif-specs), which provides standardized protocols for intent-based interactions in decentralized systems. This compliance ensures:
+
+- **Interoperability**: The API follows established standards that enable seamless integration with other OIF-compliant systems
+- **Consistency**: Quote requests and responses follow a well-defined schema that developers can rely on
+- **Future-proofing**: Adherence to the OIF specification ensures compatibility with evolving intent protocols
+
+The OIF specification defines machine-readable schemas, TypeScript interfaces, and OpenAPI documentation that govern how intent-based quote requests should be structured and processed. Our implementation follows these standards to provide a robust and standardized quoting experience.
+
 ### Quote Request Structure
 
 ```json
@@ -102,15 +112,15 @@ Users can request quotes using the `/quote/request` endpoint. This endpoint does
     "inputs": [
       {
         "user": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-        "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-        "amount": "4000000000"
+        "asset": "0x0001000003014a3414036cbd53842c5426634e7929541ec2318f3dcf7e",
+        "amount": "23940002"
       }
     ],
     "outputs": [
       {
-        "receiver": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-        "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-        "amount": "2000000000000000000"
+        "receiver": "0x0001000003aa36a714841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+        "asset": "0x0001000003aa36a7141c7d4b196cb0c7b01d743fbc6116a902379c7238",
+        "amount": null
       }
     ],
     "swapType": "exact-input",
@@ -136,14 +146,14 @@ Users can request quotes using the `/quote/request` endpoint. This endpoint does
           {
             "user": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
             "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-            "amount": "4000000000"
+            "amount": "23940002"
           }
         ],
         "outputs": [
           {
             "receiver": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
             "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
-            "amount": "2000000000000000000"
+            "amount": "23592576"
           }
         ]
       },
