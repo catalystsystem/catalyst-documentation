@@ -6,46 +6,73 @@ sidebar:
   order: 3
 ---
 
-The order server will deliver quotes to intent issuers. These are based on the available inventory provided by solvers. To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `quote chunks`.
+:::note
+You can interact with the API through the [swagger docs](https://order-dev.li.fi/docs#/Quotes/QuotesController_submitQuotes) endpoint when the server is running, providing a complete reference for all available endpoints and their schemas.
+:::
+
+The order server will deliver quotes to intent issuers.
+These are based on the available inventory provided by solvers.
+To avoid the need for solvers to respond to every individual quote request, the order server allows solvers to regularly push their inventory to the order server in the format of `solver quotes`.
 This approach significantly reduces the overhead for solvers and improves the efficiency of the quoting process.
 
-The following code chunk provides an example implementation of quoting between USDC and USDC between Ethereum and Base.
+## Submitting Quotes
+
+Solvers can submit their inventory quotes using the `/quotes/submit` endpoint. This endpoint requires API key authentication and accepts an array of quote objects.
+
+### Quote Structure
+
+Each quote contains the following information:
 
 ```json
 {
-  "chainId": 1, // Ethereum
-  "asset": "0xA0b86991c...", // USDC on Ethereum, address(0) for native tokens
-  "fromPrice": "1000000000000000000", // price of token in USDC when sold to the solver
-  "toPrice": "1100000000000000000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in token when sold to the solver
-  "toCost": "1000", // cost of token in token when bought from the solver
-  "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // minimum amount the solver will process
-  "expiry": 1713296400 // quote expires at this timestamp
-}, {
-  "chainId": 8453, // Base
-  "asset": "0x833589fCD...", // USDC on Base, address(0) for native tokens
-  "fromPrice": "1000000000000000000", // price of token in USDC when sold to the solver
-  "toPrice": "1100000000000000000", // price of token in USDC when bought from the solver
-  "fromCost": "1000", // cost of token in token when sold to the solver
-  "toCost": "1000", // cost of token in token when bought from the solver
-  "maxAmount": 1000000000, // max the solver will handle
-  "minAmount": 1000000, // minimum amount the solver will process
-  "expiry": 1713296400 // quote expires at this timestamp
+  "fromChain": "84532", // Source chain network ID (Base Sepolia)
+  "toChain": "11155420", // Destination chain network ID (Optimism Sepolia)
+  "fromAsset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Source asset address (address(0) for native tokens)
+  "toAsset": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", // Destination asset address (address(0) for native tokens)
+  "fromDecimals": 6, // Decimals of the source token
+  "toDecimals": 6, // Decimals of the destination token
+  "ranges": [
+    {
+      "minAmount": "1000000", // Minimum amount that can be swapped (in token units)
+      "maxAmount": "1000000000", // Maximum amount that can be swapped (in token units)
+      "quote": "0.99" // Quote rate for this range (as decimal string)
+    }
+  ],
+  "expiry": 1672531200, // Quote expires at this Unix timestamp (seconds, no milliseconds)
+  "exclusiveFor": "0x1234567890123456789012345678901234567890" // Optional: exclusive for specific address
 }
 ```
 
-Prices are specified in an abstract intermediary that has to be consistent between **your** quotes. We recommended using USDC with 18 decimals. Everything is integer priced. Make sure that your decimals are correct. The final quote will be derived as: $$Quote  = \frac{\left(inputAmount\ -\ inputFee\right)\ \cdot\ inputPrice}{outputPrice} - outputFee$$
+### Complete Submit Request Example
 
+```json
+{
+  "quotes": [
+    {
+      "fromChain": "84532",
+      "toChain": "11155420",
+      "fromAsset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "toAsset": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+      "fromDecimals": 6,
+      "toDecimals": 6,
+      "ranges": [
+        {
+          "minAmount": "1000000",
+          "maxAmount": "1000000000",
+          "quote": "0.99"
+        }
+      ],
+      "expiry": 1672531200
+    }
+  ]
+}
+```
 
 :::caution
-It is important to factor token decimals into your quotes; otherwise, assets will be priced incorrectly. 
-For example, for a 1000 USDC to Ether swap with the price of $1500 USDC per Ether:
-
-$$Quote  = \frac{\left(1000'000'000 - 1'000'000\right) \cdot 1'000'000'000'000'000'000}{1500'000'000} - outputFee = 666'666'666'666'666'666 = 0.67\ Ether$$
-
-Note that the decimals are inversely represented. If a USDC quote is provided with 18 decimals, then an Ether quote should have $$6+18-18=6$$ decimals, while another USDC quote should have $$6+18-6=18$$ decimals. A token with 8 decimals should have its quote with $$6+18-8=16$$ decimals.  
+It is important to factor token decimals into your quotes; otherwise, assets will be priced incorrectly
 :::
+
+### Quote Management
 
 It is important that solvers update their quotes periodically as market conditions change, with correct expiry dates. If your quotes expire, the order server will stop using them to match user requests.
 
@@ -55,30 +82,215 @@ To avoid sending short-lived quotes, the order server will overwrite existing qu
 
 By broadcasting quotes in this manner, solvers can:
 
-- Efficiently communicate their available liquidity across multiple chain and token pairs.
-- Set their own pricing and fee structure.
-- Define limits on transaction sizes they're willing to process.
-- Update their quotes as market conditions change.
-- The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers.
+- Efficiently communicate their available liquidity across multiple chain and token pairs
+- Set their own pricing and fee structure
+- Define limits on transaction sizes they're willing to process
+- Update their quotes as market conditions change
+- The order server then uses these broadcast quotes to match incoming user requests without needing to query solvers in real-time for every request, resulting in faster quote responses for users and reduced operational overhead for solvers
 
-Submit quotes to [`/quotes/submit`](https://order-dev.li.fi/docs#/Quotes/QuotesController_submitQuote).
+## Requesting Quotes
+
+Users can request quotes using the `/quote/request` endpoint. This endpoint does not require authentication and accepts an OIF (Order Intent Format) quote request.
+
+### Quote Request Structure
+
+```json
+{
+  "user": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+  "intent": {
+    "intentType": "oif-swap",
+    "inputs": [
+      {
+        "user": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+        "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+        "amount": "4000000000"
+      }
+    ],
+    "outputs": [
+      {
+        "receiver": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+        "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+        "amount": "2000000000000000000"
+      }
+    ],
+    "swapType": "exact-input",
+    "preference": "price"
+  },
+  "supportedTypes": ["oif-escrow-v0", "oif-resource-lock-v0"]
+}
+```
+
+### Quote Response Structure
+
+```json
+{
+  "quotes": [
+    {
+      "order": null,
+      "eta": null,
+      "validUntil": null,
+      "quoteId": null,
+      "metadata": {
+        "exclusiveFor": "0x1234567890123456789012345678901234567890",
+        "inputs": [
+          {
+            "user": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+            "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+            "amount": "4000000000"
+          }
+        ],
+        "outputs": [
+          {
+            "receiver": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+            "asset": "0x0001000003014a3414841f63697cfa0e3b54c4d42b3d679f07f7f2485f",
+            "amount": "2000000000000000000"
+          }
+        ]
+      },
+      "provider": null,
+      "partialFill": false,
+      "failureHandling": "refund-automatic"
+    }
+  ]
+}
+```
 
 ## Chain & Asset Support
 
 The order server uses quotes to determine supported chains and assets. This allows solvers to add support for new chains and assets simply by producing quotes for them.
 
-## Authentication (WIP)
+Currently supported chains:
 
-While authentication is not necessary to subscribe to the order server's WebSocket events, it is required to use some of the order server's API services.
+- **Ethereum Sepolia** (Chain ID: 11155111)
+- **Base Sepolia** (Chain ID: 84532)
+- **Optimism Sepolia** (Chain ID: 11155420)
+
+Currently supported tokens:
+
+- **USDC** on all supported chains
+
+## API Endpoints
+
+### Submit Quotes
+
+- **Endpoint**: `POST /quotes/submit`
+- **Authentication**: Required (API Key)
+- **Content-Type**: `application/json`
+- **Rate Limit**: None specified
+
+### Request Quote
+
+- **Endpoint**: `POST /quote/request`
+- **Authentication**: Not required
+- **Content-Type**: `application/json`
+- **Rate Limit**: None specified
+
+## Authentication
+
+While authentication is not necessary to request quotes, it is required to submit quotes to the order server.
 All solvers must be authenticated with the order server to be able to push their inventory. Without authentication, the order server won't be able to offer your quotes to users.
 Authentication is handled via API tokens that provide secure access to the order server's protected API services.
 
-##### Obtaining API Access
+### Obtaining API Access
 
 To get your API token, please reach out to the order server team.
 
-##### Using Your API Token
+### Using Your API Token
 
 If you have an API token, it must be included in all requests to the order server for reputation purposes:
 
 - For HTTP requests: Include the token in the request headers as `x-api-key: YOUR_API_TOKEN`
+
+### Example Request with Authentication
+
+```bash
+curl -X POST "https://your-api-server.com/quotes/submit" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_your_api_key_here" \
+  -d '{
+    "quotes": [
+      {
+        "fromChain": "84532",
+        "toChain": "11155420",
+        "fromAsset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "toAsset": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+        "fromDecimals": 6,
+        "toDecimals": 6,
+        "ranges": [
+          {
+            "minAmount": "1000000",
+            "maxAmount": "1000000000",
+            "quote": "0.99"
+          }
+        ],
+        "expiry": 1672531200
+      }
+    ]
+  }'
+```
+
+## Error Handling
+
+The API returns standard HTTP status codes:
+
+- **200 OK**: Request successful
+- **400 Bad Request**: Invalid request data or validation errors
+- **401 Unauthorized**: Missing or invalid API key
+- **403 Forbidden**: API key expired or insufficient permissions
+- **404 Not Found**: No quotes available for the requested parameters
+- **500 Internal Server Error**: Server error
+
+## Rate Limits and Constraints
+
+- Maximum quotes per request: 200,000
+- Batch processing: Quotes are processed in batches.
+- Quote validation: All quotes must have non-zero values
+- Expiry validation: Must be valid Unix timestamp in seconds (10 digits)
+
+## Reputation System
+
+The order server implements a sophisticated reputation system that tracks solver performance and influences quote selection. This system ensures that reliable solvers are prioritized while maintaining fair competition.
+
+### How Reputation Works
+
+**Reputation Accumulation:**
+
+- Solvers earn reputation points when they successfully fill orders
+- The reputation is directly tied to the reward amount from filled orders
+- Each successful order execution increases the solver's reputation by the reward amount
+
+**Reputation Normalization:**
+
+- The system maintains two reputation metrics: `reputation` (raw points) and `reputationNorm` (normalized value)
+- `reputationNorm` is calculated as the square root of the current reputation: `reputationNorm = √(reputation)`
+- This normalization prevents high-reputation solvers from completely dominating the market
+
+**Daily Decay:**
+
+- Reputation naturally decays over time to prevent stale reputation from having excessive influence
+- Daily decay rate: 1/120 (approximately 0.83% per day)
+- Formula: `new_reputation = current_reputation - (current_reputation / 120)`
+- This ensures that active solvers maintain their standing while inactive ones gradually lose influence
+
+### Quote Selection Algorithm
+
+When multiple solvers have quotes for the same trade, the system uses a weighted random selection based on reputation:
+
+1. **Filter by Price**: Only quotes within acceptable price ranges are considered
+2. **Reputation Weighting**: Each solver's selection probability is proportional to their `reputationNorm` value
+3. **Weighted Random Selection**: A random number is generated and matched against cumulative reputation weights
+4. **Fair Distribution**: Higher reputation solvers have better chances but don't guarantee selection
+
+### Benefits of the Reputation System
+
+1. **Quality Assurance**: Reliable solvers who consistently fill orders gain higher reputation
+2. **Fair Competition**: The square root normalization prevents monopolization
+3. **Dynamic Market**: Daily decay ensures the system adapts to changing solver performance
+4. **Incentive Alignment**: Solvers are incentivized to provide competitive quotes and execute successfully
+5. **User Experience**: Users benefit from higher-quality quotes from proven solvers
+
+### Monitoring Your Reputation
+
+Solver reputation can be monitored through the [Dashboard](https://order-server-dashboard-temp.vercel.app/), which provides a way to view your reputation & manage your api keys:
+
+This transparency allows solvers to understand their standing in the ecosystem and make informed decisions about their quoting strategies.
